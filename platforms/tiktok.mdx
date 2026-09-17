@@ -1,0 +1,64 @@
+---
+title: TikTok
+description: Connect your TikTok account to TryPost
+icon: "tiktok"
+---
+
+# TikTok
+
+TryPost supports posting videos and photo carousels to TikTok.
+
+## Connect your account
+
+1. Go to **Accounts** in the TryPost dashboard
+2. Click **Connect TikTok**
+3. Authorize TryPost on TikTok
+
+## Supported content types
+
+| Type | `content_type` | Aspect ratio | Description |
+|------|---------------|--------------|-------------|
+| **Video** | `tiktok_video` | 9:16 | Short or long-form video (1 video, required) |
+| **Photo carousel** | `tiktok_photo` | 1:1 | Multi-image post — up to 35 images per carousel |
+
+## Media limits
+
+| `content_type` | Image | Video | Duration | Format |
+|----------------|-------|-------|----------|--------|
+| `tiktok_video` | — | 1 GB (Cloud cap; TikTok allows 4 GB) | 10 minutes, or less if `creator_info` says so | MP4 or MOV (TryPost does not accept WebM uploads) |
+| `tiktok_photo` | 10 MB | — | — | JPEG/WebP, up to 35 images |
+
+Official specs: [Media Transfer Guide](https://developers.tiktok.com/doc/content-posting-api-media-transfer-guide). Full catalog: [Media](/knowledge-base/media).
+
+## Per-post options
+
+TikTok exposes extra publishing options that you can set per post in the editor sidebar (or via `platforms[].meta` on the API):
+
+| Option | Values | Applies to |
+|--------|--------|------------|
+| `privacy_level` | `PUBLIC_TO_EVERYONE`, `MUTUAL_FOLLOW_FRIENDS`, `FOLLOWER_OF_CREATOR`, `SELF_ONLY` | Video + Photo |
+| `disable_comment` | boolean | Video + Photo |
+| `disable_duet` / `disable_stitch` | boolean | Video only — ignored for photo carousels |
+| `brand_content_toggle` / `brand_organic_toggle` | boolean (required if your post contains branded content per TikTok policy) | Video only |
+
+## OAuth scopes
+
+`user.info.basic`, `user.info.profile`, `user.info.stats`, `video.publish`, `video.upload`, `video.list`
+
+`user.info.stats` and `video.list` are required for the **Analytics** dashboard's TikTok view.
+
+## Self-hosting setup
+
+<Accordion title="Configure TikTok API credentials">
+  1. Go to [TikTok Developers](https://developers.tiktok.com/) and create an app
+  2. Enable both the **Content Posting API** (for `video.publish` / `video.upload`) and **Login Kit** (for the `user.info.*` scopes)
+  3. Add the scopes listed above to the app's authorized scopes
+  4. Set the redirect URL to `{APP_URL}/accounts/tiktok/callback`
+  5. Add to your `.env`:
+
+  ```env
+  TIKTOK_CLIENT_ID=your_client_key
+  TIKTOK_CLIENT_SECRET=your_client_secret
+  TIKTOK_CLIENT_REDIRECT="${APP_URL}/accounts/tiktok/callback"
+  ```
+</Accordion>

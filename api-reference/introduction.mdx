@@ -1,0 +1,143 @@
+---
+title: "Introduction"
+description: "The TryPost API lets you manage social media posts, the Asset Library, signatures, labels, repurposes, webhooks, and more with a simple REST API."
+icon: "book-open"
+---
+
+<Note>
+  Building your own scheduler on **TryPost Connect** ([https://connect.trypost.it](https://connect.trypost.it))? That is a separate, closed-source Cloud product — we run the social infra, you ship the app. Docs: [Connect API](/connect). This page is the TryPost scheduler API.
+</Note>
+
+## Base URL
+
+The TryPost API is available at:
+
+```
+https://app.trypost.it/api
+```
+
+For self-hosted instances, the base URL is your `APP_URL` followed by `/api` (e.g., `https://trypost.yourdomain.com/api`).
+
+## Authentication
+
+All API requests require a Bearer token in the `Authorization` header. You can create API keys (Personal Access Tokens) from [Settings → API Keys](https://app.trypost.it/settings/workspace/api-keys) or via the [`POST /api-keys`](/api-reference/endpoint/create-api-key) endpoint.
+
+```bash
+Authorization: Bearer YOUR_API_KEY
+```
+
+<Warning>
+  Keep your API key secret. Do not expose it in client-side code or public repositories. The plain token value is only shown once at creation — store it immediately.
+</Warning>
+
+## Workspace scoping
+
+Every API key is bound to a specific workspace at creation time. All requests act on that workspace — you cannot list or modify resources from other workspaces with the same key. To work with multiple workspaces, create one API key per workspace.
+
+API keys authenticate the REST API only. The [MCP server](/ai/introduction) uses OAuth (`mcp:use`), not Personal Access Tokens.
+
+## Rate limiting
+
+API requests are throttled to prevent abuse. When you exceed the limit, the API returns a `429` status code with a `Retry-After` header indicating how many seconds to wait.
+
+## Errors
+
+The API uses conventional HTTP status codes. All error responses include a `message` field.
+
+| Status | Description |
+|--------|-------------|
+| `200` | Success |
+| `201` | Created |
+| `204` | No content (successful deletion) |
+| `401` | Missing or invalid API key |
+| `402` | Active subscription required (Cloud only — self-hosted instances skip this check) |
+| `403` | Forbidden — e.g. a Viewer calling a create-post or update endpoint (including listing assets) |
+| `404` | Resource not found, or resource not in the key's workspace |
+| `422` | Validation error — including a rejected webhook `endpoint` (`errors.endpoint`) |
+| `429` | Rate limit exceeded |
+
+```json
+{
+  "message": "The name field is required."
+}
+```
+
+## Response shape
+
+Resources are returned **unwrapped** — no `data:` envelope. A single resource looks like:
+
+```json
+{
+  "id": "9f1a2b3c-...",
+  "name": "...",
+  "...": "..."
+}
+```
+
+A non-paginated collection looks like a plain array:
+
+```json
+[
+  { "id": "9f1a2b3c-...", "name": "..." },
+  { "id": "a1b2c3d4-...", "name": "..." }
+]
+```
+
+The endpoints that wrap in `data:` are the paginated lists: [`GET /posts`](/api-reference/endpoint/list-posts), [`GET /assets`](/api-reference/endpoint/list-assets), [`GET /repurposes`](/api-reference/endpoint/list-repurposes), [`GET /repurposes/{id}/items`](/api-reference/endpoint/list-repurpose-items), and [`GET /webhooks/{id}/logs`](/api-reference/endpoint/list-webhook-logs). [`GET /repurpose-source-formats`](/api-reference/endpoint/list-repurpose-source-formats) wraps in `data:` but is not paginated.
+
+## Pagination
+
+These list endpoints paginate. They use Laravel's standard pagination envelope (`data`, `links`, `meta`) and the `page` query parameter:
+
+| Endpoint | Per page | Notes |
+|---|---|---|
+| [`GET /posts`](/api-reference/endpoint/list-posts) | **15** | Posts only |
+| [`GET /assets`](/api-reference/endpoint/list-assets) | **25** | Asset Library. No `per_page` parameter |
+| [`GET /webhooks/{id}/logs`](/api-reference/endpoint/list-webhook-logs) | **15** | Delivery logs for one webhook. No `per_page` parameter |
+| [`GET /repurposes`](/api-reference/endpoint/list-repurposes) | **25** | Workspace repurposes. No `per_page` parameter |
+| [`GET /repurposes/{id}/items`](/api-reference/endpoint/list-repurpose-items) | **25** | Activity for one repurpose. No `per_page` parameter |
+
+Example envelope for posts:
+
+```json
+{
+  "data": [...],
+  "links": {
+    "first": "https://app.trypost.it/api/posts?page=1",
+    "last":  "https://app.trypost.it/api/posts?page=5",
+    "prev":  null,
+    "next":  "https://app.trypost.it/api/posts?page=2"
+  },
+  "meta": {
+    "current_page": 1,
+    "from": 1,
+    "to": 15,
+    "last_page": 5,
+    "per_page": 15,
+    "total": 72,
+    "path": "https://app.trypost.it/api/posts",
+    "links": [
+      { "url": null, "label": "&laquo; Previous", "page": null, "active": false },
+      { "url": "https://app.trypost.it/api/posts?page=1", "label": "1", "page": 1, "active": true },
+      { "url": null, "label": "Next &raquo;", "page": null, "active": false }
+    ]
+  }
+}
+```
+
+Use the `page` query parameter to navigate. Other list endpoints (signatures, labels, social accounts, API keys, webhooks) return all items without pagination, as a plain array.
+
+## Quick reference
+
+| Resource | Endpoints |
+|---|---|
+| Posts | `GET /posts`, `POST /posts`, `GET /posts/{id}`, `PUT /posts/{id}`, `DELETE /posts/{id}`, `POST /posts/{id}/media`, `POST /posts/{id}/media/from-url`, `POST /posts/{id}/media/from-asset`, `GET /posts/{id}/metrics`, `GET /posts/{id}/preview` |
+| Platforms | `GET /content-types` |
+| Workspace | `GET /workspace` |
+| Assets | `GET /assets`, `GET /assets/{id}` |
+| Signatures | `GET /signatures`, `POST /signatures`, `PUT /signatures/{id}`, `DELETE /signatures/{id}` |
+| Labels | `GET /labels`, `POST /labels`, `PUT /labels/{id}`, `DELETE /labels/{id}` |
+| Social accounts | `GET /social-accounts`, `PUT /social-accounts/{id}/toggle`, `GET /social-accounts/{id}/boards` (Pinterest), `GET /social-accounts/{id}/channels` (Discord) |
+| API keys | `GET /api-keys`, `POST /api-keys`, `DELETE /api-keys/{id}` |
+| Repurpose | `GET /repurposes`, `POST /repurposes`, `GET /repurposes/{id}`, `PUT /repurposes/{id}`, `GET /repurposes/{id}/items`, `POST /repurposes/{id}/activate`, `POST /repurposes/{id}/pause`, `POST /repurposes/{id}/resume`, `POST /repurposes/{id}/disable`, `DELETE /repurposes/{id}`, `GET /repurpose-source-formats` |
+| Webhooks | `GET /webhooks`, `POST /webhooks`, `GET /webhooks/{id}`, `PUT /webhooks/{id}`, `DELETE /webhooks/{id}`, `POST /webhooks/{id}/send-test`, `POST /webhooks/{id}/rotate-secret`, `GET /webhooks/{id}/logs`, `POST /webhooks/{id}/logs/{log}/replay` |

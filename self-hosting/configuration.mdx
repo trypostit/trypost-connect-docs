@@ -1,0 +1,565 @@
+---
+title: Configuration
+description: Configure TryPost environment variables
+icon: "gear"
+---
+
+# Configuration
+
+TryPost is configured through environment variables in the `.env` file.
+
+## Basic Configuration
+
+```env
+APP_NAME="TryPost"
+APP_ENV=local
+APP_DEBUG=true
+APP_URL=http://localhost
+WEBHOOK_URL=
+```
+
+| Variable | Description |
+|----------|-------------|
+| `APP_NAME` | Your application name |
+| `APP_ENV` | Environment: `local`, `staging`, `production` |
+| `APP_DEBUG` | Enable debug mode (set to `false` in production) |
+| `APP_URL` | Your application URL |
+| `WEBHOOK_URL` | Optional public base URL for inbound webhooks (e.g. Telegram) when `APP_URL` is not reachable from the internet. Defaults to `APP_URL`. |
+
+## Self-Hosted Mode
+
+```env
+SELF_HOSTED=true
+```
+
+`SELF_HOSTED=true` is the default. It bypasses everything billing-related so you never have to touch Stripe or Cashier, and it locks down public sign-ups:
+
+- **Public registration is disabled** — `/register` is closed so random users can't create accounts on your instance. Bootstrap the first admin via the `UserSeeder` (see [Seed default data and create the admin user](/self-hosting/installation#6-seed-passport-client-and-admin-user)); after that, every account comes from a workspace invite (Settings → Members).
+- No Stripe, Cashier, or `CASHIER_TRIAL_DAYS` configuration required
+- The `LoadWorkspaceFromToken` middleware skips the `402 Payment Required` gate
+- Subscription gating is not enforced, so workspaces, social accounts, and members are unlimited per account
+- AI calls go straight to your configured provider; you pay the provider directly (no Cloud metering)
+
+There's no reason to flip this to `false` on a self-hosted install. The Cloud SaaS deployment is the only place that runs with billing enabled.
+
+## Multiple accounts per network
+
+A workspace can connect as many accounts as you want on the same network — two LinkedIns, two Instagrams, and so on. There is no env flag for this.
+
+Two flavours of the same platform still collapse to **one identity**:
+
+- LinkedIn profile + LinkedIn Page
+- Instagram Standalone + Instagram (Facebook Business)
+
+The same identity cannot sit twice. Reconnecting an account that already has a card updates that card instead of adding another.
+
+`ALLOW_MULTIPLE_SOCIAL_ACCOUNTS` was removed. If it is still in your `.env`, you can delete it — it is ignored.
+
+## Database
+
+TryPost runs on **PostgreSQL** or **MySQL**. Every change runs the full test suite against both, so the application treats them as equals — pick the one you already know how to back up and restore. What differs is the packaging around them:
+
+| | PostgreSQL | MySQL |
+|---|---|---|
+| Covered by the test suite | 16 | 8.4 |
+| Expected to work | 14+ | 8+ |
+| Shipped by the Compose files | Yes | No — [see below](/self-hosting/docker) |
+| Runs TryPost Cloud | Yes | No |
+
+MariaDB is close enough to MySQL that it may well work, but it is not tested and not something support can help with.
+
+Pick one before you have data. Moving an existing install from one engine to the other is not a dump-and-load: the two disagree on types, quoting and JSON layout, so it needs a conversion tool and a careful check afterwards. That path is neither documented nor supported.
+
+### PostgreSQL
+
+```env
+DB_CONNECTION=pgsql
+DB_HOST=127.0.0.1
+DB_PORT=5432
+DB_DATABASE=trypost
+DB_USERNAME=postgres
+DB_PASSWORD=your_password
+```
+
+### MySQL
+
+```env
+DB_CONNECTION=mysql
+DB_HOST=127.0.0.1
+DB_PORT=3306
+DB_DATABASE=trypost
+DB_USERNAME=root
+DB_PASSWORD=your_password
+```
+
+Create the database as `utf8mb4` (see [Installation](/self-hosting/installation)) so emoji in posts survive. MySQL 8 already defaults to it; this matters on older servers and on MariaDB.
+
+<Warning>
+  **On MySQL you cannot schedule a post past 19 January 2038.**
+
+  TryPost's schema stores dates in MySQL's `TIMESTAMP` columns, and that type ends on 19 January 2038 — a post scheduled beyond it is rejected outright. PostgreSQL's equivalent has no such ceiling, which is why the same schedule saves there.
+
+  This only bites if you schedule more than a decade ahead. If that is part of how you work, choose PostgreSQL.
+</Warning>
+
+## Redis
+
+Redis is required for queues and caching.
+
+```env
+REDIS_HOST=127.0.0.1
+REDIS_PASSWORD=null
+REDIS_PORT=6379
+```
+
+## Runtime drivers
+
+For a working production-like stack, point the Laravel drivers at Redis / Reverb / the database:
+
+```env
+QUEUE_CONNECTION=redis
+CACHE_STORE=redis
+SESSION_DRIVER=database
+BROADCAST_CONNECTION=reverb
+```
+
+| Variable | Recommended | Why |
+|----------|-------------|-----|
+| `QUEUE_CONNECTION` | `redis` | Horizon processes Redis queues (publishing, notifications, webhooks) |
+| `CACHE_STORE` | `redis` | Cache + `onOneServer()` schedule locks across instances |
+| `SESSION_DRIVER` | `database` | Durable sessions behind multiple app workers |
+| `BROADCAST_CONNECTION` | `reverb` | Real-time dashboard updates |
+
+Without Redis queues, Horizon has nothing useful to process. Without Redis cache on multi-instance deploys, scheduled jobs can double-fire.
+
+## Passport (API & MCP tokens)
+
+Passport signs and verifies both **REST API keys** (Personal Access Tokens) and **MCP OAuth** grants. You need:
+
+```bash
+php artisan passport:keys          # once — RSA files in storage/
+php artisan db:seed                # once — Personal Access Client in the DB (API keys)
+```
+
+Alternatively, set `PASSPORT_PRIVATE_KEY` and `PASSPORT_PUBLIC_KEY` in `.env` (PEM contents) instead of key files — **required for Docker production** (`compose.prod.yaml`) and useful for secret managers / multi-node deploys. Do not regenerate keys after users have issued tokens.
+
+MCP clients authenticate with OAuth (`mcp:use`), not with an API key Bearer header. API keys are for the REST API only.
+
+The [API reference](/api-reference/introduction) describes your instance too — same routes, same payloads, same MCP tools. Only two things differ: the base URL is your `APP_URL` followed by `/api`, and responses reflect the settings on this page rather than the Cloud plan. `GET /social-accounts` can return several accounts sharing one `platform` value, so read it by `id`. See [multiple accounts per network](#multiple-accounts-per-network).
+
+Full install order: [Installation](/self-hosting/installation).
+
+
+## Media size limits
+
+```env
+MEDIA_IMAGE_MAX_SIZE_MB=10
+MEDIA_VIDEO_MAX_SIZE_MB=1024
+MEDIA_DOCUMENT_MAX_SIZE_MB=100
+MEDIA_SIGNED_UPLOAD_URL_TTL_MINUTES=15
+```
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `MEDIA_IMAGE_MAX_SIZE_MB` | `10` | Max image upload size, in MB. Applied to direct uploads and URL fetches. |
+| `MEDIA_VIDEO_MAX_SIZE_MB` | `1024` | Max video upload size, in MB. Applied to direct uploads and URL fetches. |
+| `MEDIA_DOCUMENT_MAX_SIZE_MB` | `100` | Max document (PDF) upload size, in MB. |
+| `MEDIA_SIGNED_UPLOAD_URL_TTL_MINUTES` | `15` | Lifetime of the signed upload URL returned by MCP / API media upload flows. (`MCP_UPLOAD_URL_TTL_MINUTES` remains as a legacy fallback.) |
+
+Signed uploads are rate-limited per workspace and per IP (`MEDIA_SIGNED_UPLOAD_PER_WORKSPACE_PER_MINUTE`, `MEDIA_SIGNED_UPLOAD_PER_IP_PER_MINUTE`). If you raise the video limit, also bump PHP's `upload_max_filesize` / `post_max_size` and any reverse-proxy body-size cap to match.
+
+## File Storage
+
+TryPost supports local public storage and S3-compatible cloud storage.
+
+The application default is **`public`** (`FILESYSTEM_DISK=public`). Use object storage (S3 / R2 / Spaces) when you outgrow local disk or run multiple app instances.
+
+### Public Disk
+
+Stores files in `storage/app/public` and serves them directly from `${APP_URL}/storage`.
+
+```env
+FILESYSTEM_DISK=public
+```
+
+Create the symlink from `public/storage` to `storage/app/public` (once per install):
+
+```bash
+php artisan storage:link
+```
+
+Only needed for the `public` disk. Object storage (`s3`, `r2`, `spaces`) does not use this symlink.
+
+See Laravel's [public disk documentation](https://laravel.com/docs/13.x/filesystem#the-public-disk) for more details.
+
+### AWS S3
+
+```env
+FILESYSTEM_DISK=s3
+AWS_ACCESS_KEY_ID=your_key
+AWS_SECRET_ACCESS_KEY=your_secret
+AWS_DEFAULT_REGION=us-east-1
+AWS_BUCKET=your_bucket
+AWS_URL=https://your-bucket.s3.amazonaws.com
+```
+
+### Cloudflare R2
+
+```env
+FILESYSTEM_DISK=r2
+R2_ACCESS_KEY_ID=your_key
+R2_SECRET_ACCESS_KEY=your_secret
+R2_ENDPOINT=https://your-account.r2.cloudflarestorage.com
+R2_REGION=auto
+R2_BUCKET=your_bucket
+R2_URL=https://your-custom-domain.com
+```
+
+### DigitalOcean Spaces
+
+```env
+FILESYSTEM_DISK=spaces
+SPACES_ACCESS_KEY_ID=your_key
+SPACES_SECRET_ACCESS_KEY=your_secret
+SPACES_ENDPOINT=https://nyc3.digitaloceanspaces.com
+SPACES_REGION=nyc3
+SPACES_BUCKET=your_bucket
+```
+
+### Other S3-Compatible Storage
+
+Any other S3-compatible storage (MinIO, Backblaze B2, etc.) can be used with the `s3` disk configuration.
+
+## Mail
+
+TryPost sends transactional emails for post notifications, team invites, account alerts, and authentication (email verification, password reset). A working mail configuration is required.
+
+### SendKit (recommended)
+
+[SendKit](https://sendkit.dev?utm_source=trypost&utm_medium=docs&utm_campaign=self-hosted) is TryPost's official mailer — built by the same team and wired in as the default. Every new SendKit account is free and includes **3,000 transactional emails per month**, which is plenty for a self-hosted TryPost instance handling post notifications, team invites, and account alerts.
+
+1. Create a free account at [sendkit.dev](https://sendkit.dev?utm_source=trypost&utm_medium=docs&utm_campaign=self-hosted)
+2. Copy your API key from the SendKit dashboard
+3. Drop it into your `.env`:
+
+```env
+MAIL_MAILER=sendkit
+SENDKIT_API_KEY=sk_your_sendkit_api_key
+MAIL_FROM_ADDRESS="notifications@yourdomain.com"
+MAIL_FROM_NAME="${APP_NAME}"
+```
+
+That's it — no DNS warm-up, no domain verification dance to get the first emails out, and the free tier doesn't expire.
+
+### SMTP
+
+If you'd rather use your own SMTP server:
+
+```env
+MAIL_MAILER=smtp
+MAIL_HOST=smtp.example.com
+MAIL_PORT=587
+MAIL_USERNAME=your_username
+MAIL_PASSWORD=your_password
+MAIL_ENCRYPTION=tls
+MAIL_FROM_ADDRESS="notifications@yourdomain.com"
+MAIL_FROM_NAME="${APP_NAME}"
+```
+
+### Emails sent by TryPost
+
+| Email | When it's sent |
+|-------|---------------|
+| **Post published** | A scheduled post was successfully published |
+| **Post failed** | A post failed to publish on one or more platforms |
+| **Account disconnected** | A social account lost its authorization and needs reconnection |
+| **Connections check** | Multiple accounts in a workspace were found disconnected |
+| **Workspace invite** | A team member is invited to join a workspace |
+| **Email verification** | A new user needs to verify their email address |
+| **Password reset** | A user requests a password reset |
+
+## WebSockets (Reverb)
+
+TryPost uses [Laravel Reverb](https://laravel.com/docs/reverb) for real-time updates (live post status, notifications).
+
+```env
+REVERB_APP_ID=1001
+REVERB_APP_KEY=your-reverb-key
+REVERB_APP_SECRET=your-reverb-secret
+
+# Public hostname / port the browser will connect to
+REVERB_HOST="localhost"
+REVERB_PORT=8080
+REVERB_SCHEME=http
+
+# Bind address the Reverb server listens on (defaults to 0.0.0.0:8080)
+REVERB_SERVER_HOST=0.0.0.0
+REVERB_SERVER_PORT=8080
+
+VITE_REVERB_APP_KEY="${REVERB_APP_KEY}"
+VITE_REVERB_HOST="${REVERB_HOST}"
+VITE_REVERB_PORT="${REVERB_PORT}"
+VITE_REVERB_SCHEME="${REVERB_SCHEME}"
+```
+
+| Variable | Description |
+|----------|-------------|
+| `REVERB_APP_ID` | Unique application ID |
+| `REVERB_APP_KEY` | Application key for client connections |
+| `REVERB_APP_SECRET` | Secret key for server-side authentication |
+| `REVERB_HOST` | Public hostname the **browser** uses to connect (advertised to clients) |
+| `REVERB_PORT` | Public port the browser connects to |
+| `REVERB_SCHEME` | Protocol: `http` or `https` |
+| `REVERB_SERVER_HOST` | Bind address the Reverb **server** listens on. Defaults to `0.0.0.0`. |
+| `REVERB_SERVER_PORT` | Port the Reverb server listens on. Defaults to `8080`. |
+
+<Note>
+  In production, set `REVERB_SCHEME=https`, set `REVERB_HOST` to your real public domain (e.g. `app.example.com`), and use a reverse proxy to handle SSL termination for WebSocket connections. `REVERB_SERVER_HOST` stays `0.0.0.0` so the daemon listens on all interfaces inside the box.
+</Note>
+
+## Social Platforms
+
+Each social platform requires API credentials from its developer portal. See each [platform guide](/) for step-by-step setup.
+
+<Note>
+  **Bluesky** and **Mastodon** don't require API credentials — they work out of the box. **Telegram** uses a single shared bot you create with [@BotFather](https://t.me/BotFather), and **Discord** uses a single shared bot application from the [Discord Developer Portal](https://discord.com/developers/applications) — neither is a per-user OAuth app. See their credentials below.
+</Note>
+
+### All platform credentials
+
+```env
+# LinkedIn (https://developer.linkedin.com)
+LINKEDIN_CLIENT_ID=
+LINKEDIN_CLIENT_SECRET=
+LINKEDIN_CLIENT_REDIRECT="${APP_URL}/accounts/linkedin/callback"
+LINKEDIN_PAGE_CLIENT_REDIRECT="${APP_URL}/accounts/linkedin-page/callback"
+
+# X / Twitter (https://developer.twitter.com)
+X_CLIENT_ID=
+X_CLIENT_SECRET=
+X_CLIENT_REDIRECT="${APP_URL}/accounts/x/callback"
+
+# Facebook (https://developers.facebook.com)
+FACEBOOK_CLIENT_ID=
+FACEBOOK_CLIENT_SECRET=
+FACEBOOK_CLIENT_REDIRECT="${APP_URL}/accounts/facebook/callback"
+
+# Instagram (https://developers.facebook.com)
+INSTAGRAM_CLIENT_ID=
+INSTAGRAM_CLIENT_SECRET=
+INSTAGRAM_CLIENT_REDIRECT="${APP_URL}/accounts/instagram/callback"
+
+# Threads (https://developers.facebook.com)
+THREADS_CLIENT_ID=
+THREADS_CLIENT_SECRET=
+THREADS_CLIENT_REDIRECT="${APP_URL}/accounts/threads/callback"
+
+# TikTok (https://developers.tiktok.com)
+TIKTOK_CLIENT_ID=
+TIKTOK_CLIENT_SECRET=
+TIKTOK_CLIENT_REDIRECT="${APP_URL}/accounts/tiktok/callback"
+
+# Google / YouTube (https://console.cloud.google.com)
+GOOGLE_CLIENT_ID=
+GOOGLE_CLIENT_SECRET=
+GOOGLE_CLIENT_REDIRECT="${APP_URL}/accounts/youtube/callback"
+
+# Pinterest (https://developers.pinterest.com)
+PINTEREST_CLIENT_ID=
+PINTEREST_CLIENT_SECRET=
+PINTEREST_CLIENT_REDIRECT="${APP_URL}/accounts/pinterest/callback"
+
+# Telegram (single shared bot — create one with https://t.me/BotFather)
+TELEGRAM_BOT_TOKEN=
+TELEGRAM_BOT_USERNAME=
+TELEGRAM_WEBHOOK_SECRET=
+
+# Discord (single shared bot app — https://discord.com/developers/applications)
+DISCORD_CLIENT_ID=
+DISCORD_CLIENT_SECRET=
+DISCORD_BOT_TOKEN=
+DISCORD_CLIENT_REDIRECT="${APP_URL}/accounts/discord/callback"
+```
+
+<Note>
+  Telegram delivers `/connect` commands and reactions over a webhook. After setting the variables above, register it with `php artisan telegram:set-webhook`. The webhook URL is `{APP_URL}/telegram/webhook`, so `APP_URL` must be a public HTTPS URL Telegram can reach — re-run the command whenever it changes. The bot must be added as an **administrator** of each channel or group it publishes to.
+</Note>
+
+<Note>
+  Discord uses a single shared bot application (create one in the [Discord Developer Portal](https://discord.com/developers/applications)). Use the OAuth2 **Client Secret** — not the application's **Public Key** — for `DISCORD_CLIENT_SECRET`, and add the redirect URL above under **OAuth2 → Redirects**. The bot invite permissions and scopes are configurable via `DISCORD_PERMISSIONS` (default `248832`) and `DISCORD_SCOPES` (default `bot,identify,guilds`). See the [Discord platform guide](/platforms/discord) for the full setup.
+</Note>
+
+### Enabling/disabling platforms
+
+You can selectively enable or disable platforms without removing their credentials. This is useful when API credentials are pending approval or temporarily revoked.
+
+```env
+LINKEDIN_ENABLED=true
+LINKEDIN_PAGE_ENABLED=true
+X_ENABLED=true
+TIKTOK_ENABLED=true
+YOUTUBE_ENABLED=true
+FACEBOOK_ENABLED=true
+INSTAGRAM_ENABLED=true
+INSTAGRAM_FACEBOOK_ENABLED=true
+THREADS_ENABLED=true
+PINTEREST_ENABLED=true
+BLUESKY_ENABLED=true
+MASTODON_ENABLED=true
+TELEGRAM_ENABLED=true
+DISCORD_ENABLED=true
+```
+
+Set any platform to `false` to hide it from the UI. All platforms are enabled by default.
+
+### Link defusing on X
+
+X charges much more to deliver a post that carries a link than a plain one, and its algorithm shows link posts to fewer people. With defusing on, every URL in the **X version** of a post is rewritten into a non-clickable form before it is published, so the address still reads normally but X no longer treats the post as a link post.
+
+```env
+X_DEFUSE_LINKS=false
+```
+
+| Value | Behaviour |
+|---|---|
+| `false` (default) | The X version of a post publishes with its URLs untouched |
+| `true` | Every URL in the X version is rewritten: the scheme and `www.` are dropped and every dot of the host becomes `(.)` |
+
+So `https://www.example.com/pricing` publishes as `example(.)com/pricing`, and `https://blog.example.com.br` as `blog(.)example(.)com(.)br`. Every dot has to break — leaving one intact still leaves a domain X can resolve and bill for.
+
+Only X is affected. The same post published to LinkedIn, Bluesky, Telegram or anywhere else keeps its links exactly as they were typed.
+
+What counts as a link:
+
+- Anything carrying `https://`, `http://` or `www.` is rewritten on sight, whatever it ends in.
+- A bare host is rewritten only when its last label is a delegated top-level domain, which is what tells `acme.com` apart from `Node.js`. The list mirrors the full IANA root zone, so `README.md` and `backup.zip` are rewritten too — `.md` and `.zip` are real top-level domains and X links them.
+- Email addresses are left alone.
+- Dots in the path or query string are left alone.
+
+Publishing and the post previews in the app, the API and MCP all show the same rewritten text, and the editor counts characters against it — what is counted is what X receives.
+
+<Note>
+  The default is off. A self-hosted install publishes through its own X app and pays its own X bill, so the saving this buys may not be worth links a reader cannot click. TryPost Cloud runs with it on.
+</Note>
+
+## Repurpose
+
+Active [repurposes](/knowledge-base/repurposes) poll Instagram and Facebook for videos published outside TryPost. The scheduler runs `repurpose:poll` every five minutes; each source is checked when it is due.
+
+```env
+REPURPOSE_POLL_INTERVAL_MINUTES=15
+REPURPOSE_BACKOFF_MINUTES=60
+```
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `REPURPOSE_POLL_INTERVAL_MINUTES` | `15` | Minutes between successful polls of one source |
+| `REPURPOSE_BACKOFF_MINUTES` | `60` | Minutes to wait after a rate-limit (or other transient) error from the source |
+
+Raise the interval if you are close to Meta's app-wide quota. Horizon and the scheduler must both be running or nothing is replicated.
+
+## Social login
+
+TryPost supports sign in with **Google** and **GitHub**. Both providers are off by default — set the corresponding `*_AUTH_ENABLED` flag and provide credentials to surface the buttons on the login/register pages.
+
+### Google
+
+Google login reuses the OAuth credentials from the YouTube integration, with a separate callback URL.
+
+```env
+GOOGLE_AUTH_ENABLED=true
+GOOGLE_CLIENT_ID=your-google-client-id
+GOOGLE_CLIENT_SECRET=your-google-client-secret
+GOOGLE_AUTH_CALLBACK="${APP_URL}/auth/google/callback"
+```
+
+In the [Google Cloud Console](https://console.cloud.google.com), add both callback URLs to your OAuth 2.0 client:
+- `https://your-domain.com/accounts/youtube/callback` (YouTube connection)
+- `https://your-domain.com/auth/google/callback` (Google login)
+
+### GitHub
+
+```env
+GITHUB_AUTH_ENABLED=true
+GITHUB_CLIENT_ID=your-github-client-id
+GITHUB_CLIENT_SECRET=your-github-client-secret
+GITHUB_AUTH_CALLBACK="${APP_URL}/auth/github/callback"
+```
+
+Register a new OAuth App at [github.com/settings/developers](https://github.com/settings/developers) and set the **Authorization callback URL** to `${APP_URL}/auth/github/callback`.
+
+## AI features (optional)
+
+The Generate / Review / Create AI flows in the post editor need a configured text-generation provider. Without one, the AI buttons stay disabled. See [AI Providers](/self-hosting/ai) for the full list of supported providers, per-provider model overrides, and OpenRouter-specific gotchas.
+
+```env
+AI_TEXT_PROVIDER=openai
+OPENAI_API_KEY=sk-...
+```
+
+## Asset library (Unsplash & Giphy)
+
+The **Assets** page exposes optional Unsplash and Giphy tabs. Configure these to enable them:
+
+```env
+UNSPLASH_ACCESS_KEY=
+UNSPLASH_SECRET_KEY=
+
+GIPHY_API_KEY=
+```
+
+Without these keys, the Library tab still works — only the stock-photo and GIF tabs are hidden.
+
+## Analytics (optional)
+
+### PostHog
+
+```env
+POSTHOG_ENABLED=true
+POSTHOG_API_KEY=phc_your_key
+POSTHOG_HOST=https://us.i.posthog.com
+
+VITE_POSTHOG_API_KEY="${POSTHOG_API_KEY}"
+VITE_POSTHOG_HOST="${POSTHOG_HOST}"
+```
+
+`POSTHOG_ENABLED` gates the entire integration — without it set to `true`, the keys are ignored.
+
+### Google Tag Manager
+
+```env
+GTM_ID=GTM-XXXXXXX
+```
+
+Both are optional and only needed if you want to track usage analytics.
+
+## Horizon (Queue Dashboard)
+
+[Laravel Horizon](https://laravel.com/docs/horizon) provides a dashboard to monitor your queues. Access it at `/horizon`.
+
+```env
+HORIZON_ALLOWED_EMAILS=admin@example.com,dev@example.com
+```
+
+| Variable | Description |
+|----------|-------------|
+| `HORIZON_ALLOWED_EMAILS` | Comma-separated list of emails allowed to access Horizon in production |
+
+If not set, Horizon dashboard will be inaccessible in non-local environments.
+
+## Advanced
+
+```env
+TRYPOST_ALLOW_PRIVATE_NETWORK=false
+TRYPOST_USER_AGENT="TryPost.it/1.0 (+https://trypost.it)"
+```
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `TRYPOST_ALLOW_PRIVATE_NETWORK` | `false` | When `true`, allows HTTP requests from TryPost ([workspace webhooks](/knowledge-base/webhooks), URL media fetches, brand autofill, etc.) to private/internal network addresses. Keep `false` unless you intentionally need that for a private network install. |
+| `TRYPOST_USER_AGENT` | `TryPost.it/1.0 (+https://trypost.it)` | `User-Agent` sent on outgoing HTTP, including webhook deliveries and test pings. |
+
+## Next Steps
+
+- [Connect your social accounts](/)
+- [Create your first post](/getting-started/quickstart)

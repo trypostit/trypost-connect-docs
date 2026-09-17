@@ -1,0 +1,69 @@
+---
+title: "OpenCode"
+description: "Connect TryPost to OpenCode for AI-powered social media management from the terminal"
+icon: "/images/ai/opencode.svg"
+---
+
+[OpenCode](https://opencode.ai) is an open-source AI coding assistant that runs in your terminal. You can connect it to TryPost's MCP server to manage your social media scheduling with natural language.
+
+## Prerequisites
+
+- OpenCode installed
+- A TryPost Cloud account with an active subscription ([plans and billing](/knowledge-base/plans-and-billing))
+
+## Setup
+
+<Steps>
+  <Step title="Open the configuration file">
+    Edit `opencode.json` in your project root (or `~/.config/opencode/opencode.json` for global config):
+
+    ```json
+    {
+      "mcp": {
+        "trypost": {
+          "type": "remote",
+          "url": "https://app.trypost.it/mcp/trypost",
+          "enabled": true
+        }
+      }
+    }
+    ```
+
+    No `Authorization` header — OpenCode discovers OAuth from the URL.
+  </Step>
+  <Step title="Sign in via mcp login">
+    Run the OAuth flow explicitly so OpenCode caches the token:
+
+    ```bash
+    opencode mcp login trypost
+    ```
+
+    OpenCode opens your browser to TryPost; approve the request and return to the terminal.
+  </Step>
+  <Step title="Verify the connection">
+    Inside OpenCode, ask:
+
+    ```
+    List all my TryPost social accounts
+    ```
+
+    If anything looks off, `opencode mcp debug trypost` prints the current token state.
+  </Step>
+</Steps>
+
+<Tip>
+  OpenCode also supports `opencode mcp logout trypost` to revoke the cached token if you need to switch accounts.
+</Tip>
+## Example prompts
+
+```
+Create a post for tomorrow at 9am
+```
+
+```
+Show me all my signatures
+```
+
+```
+Create a label called "Newsletter" with color #8b5cf6
+```

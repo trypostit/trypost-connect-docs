@@ -1,0 +1,37 @@
+---
+title: Bluesky
+description: Connect your Bluesky account to TryPost
+icon: "cloud"
+---
+
+# Bluesky
+
+TryPost supports posting to Bluesky.
+
+## Connect your account
+
+1. Go to **Accounts** in the TryPost dashboard
+2. Click **Connect Bluesky**
+3. Enter your Bluesky handle and an **App Password**
+
+<Note>
+  Bluesky doesn't use OAuth. You need to create an [App Password](https://bsky.app/settings/app-passwords) in your Bluesky settings. Do not use your main password.
+</Note>
+
+## Supported content types
+
+| Type | Description |
+|------|-------------|
+| **Post** | Text with up to 4 optional images **or** 1 video |
+
+## Media limits
+
+| `content_type` | Image | Video | Duration | Format |
+|----------------|-------|-------|----------|--------|
+| `bluesky_post` | 10 MB | 300 MB | 10 minutes | Images JPEG/PNG/GIF/WebP. Video MP4 or MOV |
+
+The video size is the lexicon's decimal value (300 000 000 bytes). Bluesky's image blob limit is 2 MB (2 000 000 bytes), but TryPost re-encodes every non-GIF image under it at publish, so only the 10 MB hard cap applies to the original; a GIF over 2 MB fails at publish. Official specs: [`app.bsky.embed.video`](https://github.com/bluesky-social/atproto/blob/main/lexicons/app/bsky/embed/video.json), [`app.bsky.embed.images`](https://github.com/bluesky-social/atproto/blob/main/lexicons/app/bsky/embed/images.json); the 10-minute limit was [announced by Bluesky on 26 August 2026](https://techcrunch.com/2026/08/26/bluesky-now-lets-you-upload-10-minute-long-videos/). Full catalog: [Media](/knowledge-base/media).
+
+## Self-hosting setup
+
+No API credentials or environment variables are required for Bluesky. It works out of the box on any self-hosted instance.

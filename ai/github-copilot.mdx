@@ -1,0 +1,75 @@
+---
+title: "GitHub Copilot"
+description: "Connect TryPost to GitHub Copilot in VS Code for AI-powered social media management"
+icon: "/images/ai/github-copilot.svg"
+---
+
+[GitHub Copilot](https://github.com/features/copilot) supports MCP servers in agent mode, allowing you to connect TryPost directly to your VS Code workflow.
+
+## Prerequisites
+
+- VS Code with the GitHub Copilot extension installed
+- Copilot agent mode enabled
+- A TryPost Cloud account with an active subscription ([plans and billing](/knowledge-base/plans-and-billing))
+
+## Setup (IDE agent mode)
+
+<Steps>
+  <Step title="Create the MCP configuration file">
+    In your project root, create or edit `.vscode/mcp.json`:
+
+    ```json
+    {
+      "servers": {
+        "trypost": {
+          "type": "http",
+          "url": "https://app.trypost.it/mcp/trypost"
+        }
+      }
+    }
+    ```
+
+    No `Authorization` header — Copilot uses VS Code's MCP layer, which discovers OAuth from the URL.
+  </Step>
+  <Step title="Reload VS Code">
+    Reload the window to load the new MCP configuration.
+  </Step>
+  <Step title="Sign in through your browser">
+    Open Copilot Chat in agent mode. VS Code prompts you to sign in to TryPost. Approve the request in the browser and the server flips to **Connected**.
+  </Step>
+  <Step title="Verify the connection">
+    Ask Copilot:
+
+    ```
+    List all my TryPost posts
+    ```
+  </Step>
+</Steps>
+
+<Tip>
+  VS Code uses `"servers"` as the top-level key (not `"mcpServers"`). This is different from most other MCP clients.
+</Tip>
+
+## Copilot coding agent (cloud)
+
+GitHub's **coding agent** (the one that runs on GitHub's infrastructure to handle issues and PRs) does not yet support OAuth for remote MCP servers. TryPost's MCP endpoint requires OAuth (`mcp:use`) and **rejects** Personal Access Tokens, so cloud coding agent MCP is not supported today.
+
+Use Copilot's **IDE agent mode** (above) for MCP, or call the [REST API](/api-reference/introduction) from Actions / scripts with an API key from **Settings → API Keys**.
+
+## Global IDE configuration
+
+To make TryPost available across all projects in your IDE, open the command palette and run **MCP: Open User Configuration** to add the server to your user-level settings.
+
+## Example prompts
+
+```
+Create a new post scheduled for tomorrow
+```
+
+```
+Show me all my signatures
+```
+
+```
+What social accounts are connected to my workspace?
+```

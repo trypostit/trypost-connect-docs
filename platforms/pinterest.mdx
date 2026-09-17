@@ -1,0 +1,63 @@
+---
+title: Pinterest
+description: Connect your Pinterest account to TryPost
+icon: "pinterest"
+---
+
+# Pinterest
+
+TryPost supports creating pins on Pinterest.
+
+## Connect your account
+
+1. Go to **Accounts** in the TryPost dashboard
+2. Click **Connect Pinterest**
+3. Authorize TryPost on Pinterest
+
+## Board selection
+
+Pinterest requires every pin to belong to a **board**. TryPost loads your boards over the API and lets you pick one in two places:
+
+- **Per post** — when you target a Pinterest account in the post editor, the platform sidebar shows a **Board** dropdown. Pick the board for that specific pin.
+- **Default board (optional)** — set a workspace default in **Accounts → your Pinterest account → Default board**. New Pinterest posts pre-fill the picker with this board; you can still override per post.
+
+If neither a per-post `board_id` nor a default board is set, publishing fails with `Pinterest board_id is required`. The post editor blocks scheduling until you pick a board; the REST API and MCP only fail at publish time, so callers must provide `platforms[].meta.board_id` themselves.
+
+## Supported content types
+
+| Type | Aspect ratio | Description |
+|------|-------------|-------------|
+| **Pin** | 2:3 | Image pin (1 image, required) |
+| **Video Pin** | 9:16 | Video pin, 4 seconds to 15 minutes (1 video, required) |
+| **Carousel** | 2:3 | Multi-image pin (up to 5 images, required) |
+
+## Media limits
+
+| `content_type` | Image | Video | Duration | Format |
+|----------------|-------|-------|----------|--------|
+| `pinterest_pin` | 10 MB | — | — | JPEG/PNG |
+| `pinterest_video_pin` | — | 1 GB | 15 minutes | MP4 or MOV |
+| `pinterest_carousel` | 10 MB | — | — | JPEG/PNG, 2–5 images |
+
+Official specs: [Creating boards and pins](https://developers.pinterest.com/docs/work-with-organic-content-and-users/create-boards-and-pins/), [Product specs](https://help.pinterest.com/en/business/article/pinterest-product-specs). Full catalog: [Media](/knowledge-base/media).
+
+## OAuth scopes
+
+`boards:read`, `boards:write`, `pins:read`, `pins:write`, `user_accounts:read`
+
+`pins:read` and `user_accounts:read` are required for the **Analytics** dashboard. `boards:read` powers the board picker.
+
+## Self-hosting setup
+
+<Accordion title="Configure Pinterest API credentials">
+  1. Go to [Pinterest Developers](https://developers.pinterest.com/) and create an app
+  2. Add the scopes listed above in the app's permissions
+  3. Set the redirect URL to `{APP_URL}/accounts/pinterest/callback`
+  4. Add to your `.env`:
+
+  ```env
+  PINTEREST_CLIENT_ID=your_app_id
+  PINTEREST_CLIENT_SECRET=your_app_secret
+  PINTEREST_CLIENT_REDIRECT="${APP_URL}/accounts/pinterest/callback"
+  ```
+</Accordion>

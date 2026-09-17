@@ -1,0 +1,61 @@
+---
+title: "Codex"
+description: "Connect TryPost to OpenAI Codex CLI for AI-powered social media management"
+icon: "/images/ai/codex.svg"
+---
+
+[OpenAI Codex](https://github.com/openai/codex) is OpenAI's CLI agent for software development. You can connect it to TryPost's MCP server to manage your social media scheduling with natural language.
+
+## Prerequisites
+
+- Codex CLI installed (`npm install -g @openai/codex`)
+- A TryPost Cloud account with an active subscription ([plans and billing](/knowledge-base/plans-and-billing))
+
+## Setup
+
+<Steps>
+  <Step title="Open the configuration file">
+    Edit `~/.codex/config.toml` and add the TryPost server:
+
+    ```toml
+    [mcp_servers.trypost]
+    type = "http"
+    url = "https://app.trypost.it/mcp/trypost"
+    ```
+
+    No `Authorization` header — Codex discovers OAuth from the URL.
+  </Step>
+  <Step title="Sign in via codex mcp login">
+    Run the OAuth flow so Codex caches the token:
+
+    ```bash
+    codex mcp login trypost
+    ```
+
+    Codex opens your browser to TryPost; approve the request and return to the terminal.
+  </Step>
+  <Step title="Verify the connection">
+    Start Codex and ask:
+
+    ```
+    List all my TryPost posts
+    ```
+  </Step>
+</Steps>
+
+<Tip>
+  Codex uses TOML for configuration (not JSON). For sandboxed environments where the default callback port isn't reachable, set `mcp_oauth_callback_port` or `mcp_oauth_callback_url` in `config.toml`.
+</Tip>
+## Example prompts
+
+```
+Create a new draft post for all my social accounts
+```
+
+```
+Show me all my signatures
+```
+
+```
+Create a label called "Campaign" with color #f59e0b
+```

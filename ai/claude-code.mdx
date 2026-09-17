@@ -1,0 +1,73 @@
+---
+title: "Claude Code"
+description: "Connect TryPost to Claude Code for AI-powered social media management from the terminal"
+icon: "/images/ai/claude.svg"
+---
+
+[Claude Code](https://docs.anthropic.com/en/docs/claude-code) is Anthropic's CLI tool for working with Claude directly in your terminal. You can connect it to TryPost's MCP server to manage your social media scheduling with natural language.
+
+## Prerequisites
+
+- Claude Code installed (`npm install -g @anthropic-ai/claude-code`)
+- A TryPost Cloud account with an active subscription ([plans and billing](/knowledge-base/plans-and-billing))
+
+## Setup
+
+<Steps>
+  <Step title="Add the TryPost MCP server">
+    Run the following command in your terminal:
+
+    ```bash
+    claude mcp add --transport http trypost https://app.trypost.it/mcp/trypost
+    ```
+
+    This registers the server in the project's `.mcp.json`. Append `--scope user` to make it available across all projects.
+  </Step>
+  <Step title="Sign in through your browser">
+    Start Claude Code and trigger the first TryPost call:
+
+    ```bash
+    claude
+    ```
+
+    ```
+    List all my scheduled posts
+    ```
+
+    Claude Code opens a browser window asking you to sign in to TryPost and authorize the connection. Click **Allow** — Claude Code stores the OAuth token and refreshes it automatically from then on.
+  </Step>
+</Steps>
+
+## Manual configuration
+
+If you prefer to edit the config file directly, this is what `claude mcp add` writes (no `Authorization` header — OAuth is discovered from the URL):
+
+```json
+{
+  "mcpServers": {
+    "trypost": {
+      "type": "http",
+      "url": "https://app.trypost.it/mcp/trypost"
+    }
+  }
+}
+```
+
+Drop it in `.mcp.json` for project scope or `~/.claude.json` for user scope.
+## Example prompts
+
+```
+Create a new post scheduled for tomorrow at 10am
+```
+
+```
+Show me all my connected social accounts
+```
+
+```
+Create a signature called "SaaS Marketing" with #saas #marketing #growth #startup
+```
+
+```
+List all my labels
+```

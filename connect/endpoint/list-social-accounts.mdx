@@ -1,0 +1,64 @@
+---
+title: "List social accounts"
+api: "GET /social-accounts"
+description: "List all connected social accounts for the current account, ordered by platform. Returns a plain array (no pagination)."
+---
+
+## Response
+
+Plain array of social account objects. Each item has these fields:
+
+<Note>
+  **Read accounts by `id`, not by `platform`.** An account can hold several identities on the same network, so the same `platform` value can appear more than once.
+</Note>
+
+Start a connect from your app with [`GET /connect/{platform}`](/connect/endpoint/connect-social-account) for every network. Connect hosts pickers and credential screens, then redirects back to your `redirect_url`. Toggle [active or inactive](/connect/endpoint/toggle-social-account) from the API.
+
+<ResponseField name="id" type="string">
+  Social account UUID.
+</ResponseField>
+<ResponseField name="platform" type="string">
+  Platform identifier. One of: `linkedin`, `linkedin-page`, `x`, `facebook`, `instagram`, `instagram-facebook`, `tiktok`, `youtube`, `threads`, `pinterest`, `bluesky`, `mastodon`, `telegram`, `discord`.
+</ResponseField>
+<ResponseField name="display_name" type="string">
+  The account's display name.
+</ResponseField>
+<ResponseField name="username" type="string">
+  The account's username or handle.
+</ResponseField>
+<ResponseField name="is_active" type="boolean">
+  Whether the account is active for publishing. Toggle with [`PUT /social-accounts/{id}/toggle`](/connect/endpoint/toggle-social-account).
+</ResponseField>
+<ResponseField name="status" type="string">
+  Connection status: `connected`, `disconnected`, or `token_expired`. Disconnected/expired accounts are skipped at publish time.
+</ResponseField>
+
+<RequestExample>
+```bash
+curl -X GET https://connect.trypost.it/api/social-accounts \
+  -H "Authorization: Bearer YOUR_API_KEY"
+```
+</RequestExample>
+
+<ResponseExample>
+```json
+[
+  {
+    "id": "b2c3d4e5-f6a7-8b9c-0d1e-2f3a4b5c6d7e",
+    "platform": "linkedin",
+    "display_name": "John Doe",
+    "username": "johndoe",
+    "is_active": true,
+    "status": "connected"
+  },
+  {
+    "id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+    "platform": "x",
+    "display_name": "John",
+    "username": "@johndoe",
+    "is_active": true,
+    "status": "connected"
+  }
+]
+```
+</ResponseExample>
