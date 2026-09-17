@@ -9,8 +9,8 @@ TryPost Connect is **B2B publishing infrastructure**. You build the scheduler, a
 It is **not** a calendar, composer, or agency suite. There is no asset library and no self-host install. Connect is a closed-source Cloud product at [https://connect.trypost.it](https://connect.trypost.it).
 
 <CardGroup cols={2}>
-  <Card title="Quickstart" icon="rocket" href="/getting-started/quickstart">
-    API key, connect an account, upload media, publish a post.
+  <Card title="Get started" icon="rocket" href="/getting-started/quickstart">
+    Account, connected networks, then an API key or MCP.
   </Card>
   <Card title="API reference" icon="code" href="/api-reference/introduction">
     Every REST endpoint, with request and response shapes.
@@ -57,7 +57,7 @@ You keep the editor, queue, and brand. Connect hosts:
 - Native publish to each network
 - Outbound webhooks
 
-Media is pass-through: [presign](/guides/media) → `PUT` the file → send that `public_url` on the post. External URLs are rejected. There is no library to browse later.
+Media is pass-through: ask for an upload slot, put the file, attach that public URL on the post. External URLs are rejected. There is no library to browse later. See [Media](/guides/media).
 
 ## Networks
 
@@ -88,4 +88,4 @@ Two non-X accounts are free. X always counts as 1. Extra non-X accounts are $3 e
 quantity = xCount + max(0, nonXCount - 2)
 ```
 
-Connecting beyond the free allowance (or connecting X) without an active subscription returns **402**. See [Billing](/guides/billing).
+Connecting beyond the free allowance (or connecting X) without a card is refused. See [Billing](/guides/billing).

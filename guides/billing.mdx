@@ -1,16 +1,16 @@
 ---
 title: Billing
-description: One plan. Quantity is the number of billable social accounts.
+description: One plan. You pay for billable social accounts, not seats.
 icon: "credit-card"
 ---
 
-TryPost Connect sells one plan: **Connect**, $3 per billable social account / month.
+TryPost Connect is one plan: **$3 per billable social account / month**.
 
-Manage the card and invoices under [Settings → Billing](https://connect.trypost.it/settings/account/billing). Stripe Checkout charges immediately — no generic trial, no promotion-code field, no first-month coupon.
+Manage the card and invoices under [Settings → Billing](https://connect.trypost.it/settings/account/billing). Checkout charges immediately — no generic trial, no promo-code field, no first-month coupon.
 
 ## What counts
 
-| | Counts as billable? |
+| | Billable? |
 |---|---|
 | First two non-X accounts | No |
 | Each extra non-X account | Yes — $3 / month |
@@ -20,14 +20,10 @@ Manage the card and invoices under [Settings → Billing](https://connect.trypos
 quantity = xCount + max(0, nonXCount - 2)
 ```
 
-Connecting beyond the free allowance, or connecting X, without an active subscription returns **402** on the API (and the dashboard sends you to billing).
+Two free non-X accounts still work when quantity is 0.
 
-The same **402** applies to the rest of the API when the account no longer has app access (paid quantity, subscription inactive).
+Connecting beyond that allowance — or connecting X — without a card is refused (dashboard sends you to billing; the API returns **402**). The same happens later if the subscription lapses and you still have paid quantity.
 
-Two free non-X accounts still have access when quantity is 0.
+After connect or disconnect, Connect updates Stripe. Quantity 0 cancels at period end.
 
-After connect or disconnect, Connect syncs Stripe quantity. Quantity 0 cancels the subscription at period end.
-
-## API
-
-A **402** body is `{ "message": "…" }`. Fix it in the dashboard, then retry.
+Fix billing in the dashboard, then retry. There is nothing to pass in the API to “unlock” a 402.

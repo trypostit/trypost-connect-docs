@@ -1,32 +1,34 @@
 ---
 title: Webhooks
-description: Signed POST deliveries when a post changes status or a social account connects.
+description: Connect tells your URL when a post changes status or a social account connects.
 icon: "webhook"
 ---
 
-Create an outgoing webhook with [`POST /webhooks`](/api-reference/webhooks/create). Connect `POST`s a JSON envelope to your `endpoint` and signs the body.
+An outgoing webhook is a public URL Connect `POST`s to. You subscribe to events, we sign the body, you answer quickly with `2xx` (including `204`).
 
-Private, loopback, and link-local URLs are rejected (`422` on `errors.endpoint`). Connect does not follow redirects — `3xx` is a failure. Respond `2xx` (including `204`) as soon as you accept the payload.
+Private, loopback, and link-local URLs are refused. Connect does not follow redirects — a `3xx` is a failure.
+
+Create and manage endpoints in the [dashboard](https://connect.trypost.it/webhooks) or the [Webhooks API](/api-reference/webhooks/create). Creating one does **not** ping the URL; send a test when you want to.
 
 ## Events
 
 | Event | When |
 |---|---|
 | `post.created` | Draft saved |
-| `post.scheduled` | Status becomes `scheduled` |
-| `post.unscheduled` | Scheduled post returns to `draft` |
-| `post.published` | Every enabled platform succeeded |
+| `post.scheduled` | Status becomes scheduled |
+| `post.unscheduled` | A scheduled post returns to draft |
+| `post.published` | Every enabled network succeeded |
 | `post.partially_published` | Mixed success |
-| `post.failed` | Every enabled platform failed |
+| `post.failed` | Every enabled network failed |
 | `post.deleted` | Post deleted |
 | `account.connected` | Social account connected or reconnected |
 | `account.disconnected` | Social account disconnected |
 
-There is no `publishing` event and no wildcard. Immediate publish goes `draft` → `publishing` (silent) → outcome event. A due scheduled post does the same.
+There is no `publishing` event and no wildcard. Immediate publish goes draft → publishing (silent) → outcome. A due scheduled post does the same. Edits that do not change status send nothing.
 
-Edits that do not change status send nothing.
+## What arrives
 
-## Envelope
+A small envelope: an id, the event name, a `data` object, and a timestamp.
 
 ```json
 {
@@ -37,36 +39,16 @@ Edits that do not change status send nothing.
 }
 ```
 
-| Field | Description |
-|---|---|
-| `id` | Delivery log UUID. Stable across retries of the same attempt. A [replay](/api-reference/webhooks/replay) gets a new id. |
-| `type` | Event name, or `webhook.test` for a ping |
-| `data` | Event payload. Empty object for `webhook.test`. Post events and account events use the shapes below. |
-| `created_at` | ISO 8601 of **this attempt**. Retries keep `id` and write a new timestamp. |
+- **id** is the delivery. Retries of the same attempt keep it. A replay gets a new one.
+- **type** is the event, or `webhook.test` for a ping (`data` is empty).
+- **data** on post events is the post (caption, media, per-network rows, author). On account events it is the social account.
+- **created_at** is **this attempt**. Retries keep the id and write a new timestamp — so the signature changes. Dedupe on `id`, not on the raw body.
 
-### `data` on post events
+## Verify it is us
 
-`id`, `account_id`, `user_id`, `status`, `created_via` (`api` \| `mcp` \| `web` \| `null`), `content`, `scheduled_at`, `published_at`, `created_at`, `updated_at` (ISO 8601), `author` (`{id,name}` or `null`), `account` (`{id,name}`), `media[]`, `platforms[]`.
+Connect sends `X-Webhook-Signature`: hex HMAC-SHA256 of the **raw body**, plus `User-Agent: TryPost.it/1.0 (+https://trypost.it)`.
 
-Each `platforms[]` row includes `id`, `social_account_id`, `platform`, `content_type`, `custom_content`, `custom_media`, `enabled`, `status`, `platform_post_id`, `platform_url`, `published_at`, `error_message`, `error_context`, display snapshots, `meta`, and a nested `social_account` (`id`, `platform`, `display_name`, `username`, `avatar_url`, `status`).
-
-### `data` on `account.connected` / `account.disconnected`
-
-`id`, `account_id`, `platform`, `display_name`, `username`, `avatar_url`, `status`, `created_at`, `updated_at`.
-
-Dedupe on `id`. Do not treat the full body as byte-identical across retries — `created_at` (and therefore the signature) changes.
-
-## Headers
-
-| Header | Value |
-|---|---|
-| `Content-Type` | `application/json` |
-| `X-Webhook-Signature` | Hex HMAC-SHA256 of the **raw request body** |
-| `User-Agent` | `TryPost.it/1.0 (+https://trypost.it)` |
-
-## Verify the signature
-
-HMAC-SHA256 the **raw body bytes** with the signing secret. Compare the hex digest to `X-Webhook-Signature` with a constant-time comparison. Do not re-serialize the JSON.
+Hash the bytes you received (not a re-serialized JSON) with the signing secret. Compare with a constant-time check.
 
 <CodeGroup>
 ```javascript Node.js
@@ -101,8 +83,8 @@ valid = hmac.compare_digest(expected, signature_header)
   Read the unparsed body (for example Express `express.raw({ type: 'application/json' })`) and only then `JSON.parse`.
 </Warning>
 
-Create, get, and rotate return `signing_secret`. List and update omit it. Rotate invalidates the previous secret immediately — including the next retry of an in-flight delivery.
+The secret is shown when you create, open, or rotate a webhook — not when you list them. Rotate invalidates the previous secret immediately, including the next retry of an in-flight delivery.
 
-`status` is `enabled`, `disabled`, or `paused`. Connect pauses a webhook after repeated failures (`paused_at` set). You cannot send `paused` on create or update — re-enable with `PUT` `status=enabled`. A [replay](/api-reference/webhooks/replay) still delivers even while paused or disabled.
+## If deliveries fail
 
-Test with [`POST /webhooks/{id}/send-test`](/api-reference/webhooks/send-test) (`type` is `webhook.test`). Creating a webhook does **not** ping the URL.
+Connect pauses the webhook after repeated failures. You turn it back on; you cannot set “paused” yourself. Replay still sends even while it is paused or disabled.

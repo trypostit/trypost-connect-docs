@@ -4,33 +4,18 @@ description: Optional groups for connected identities — a brand, a client, a c
 icon: "layer-group"
 ---
 
-A social set is a named, colored group of social accounts on **your** Connect account. It is not a workspace and not a second tenant.
+A social set is a name and a color on **your** Connect account. You put connected identities in it so a brand, a client, or a campaign stays together.
 
-Sets are optional. Accounts with `set_id: null` are ungrouped.
+It is not a workspace and not a second tenant. Everyone on the account still sees every set. Sets are optional — identities with no set are just ungrouped.
 
-## CRUD
+You can create, rename, recolor, and delete sets from the [dashboard](https://connect.trypost.it/accounts) or the [API](/api-reference/social-sets/list). Deleting a set does not disconnect anyone; those identities become ungrouped.
 
-| Method | Path |
-|---|---|
-| `GET` | [`/social-sets`](/api-reference/social-sets/list) — plain array |
-| `POST` | [`/social-sets`](/api-reference/social-sets/create) — `name`, `color` (exactly `#` + 6 hex digits, e.g. `#2563EB`) |
-| `GET` | [`/social-sets/{id}`](/api-reference/social-sets/get) |
-| `PUT` | [`/social-sets/{id}`](/api-reference/social-sets/update) |
-| `DELETE` | [`/social-sets/{id}`](/api-reference/social-sets/delete) — `204`. Accounts in the set become ungrouped. |
+The name is unique on your account. The color is a six-digit hex value (`#2563EB`).
 
-`name` is unique per Connect account.
+## What you use them for
 
-## Assign an account
+- Filter the account list when you only care about one brand.
+- Keep two clients’ Instagrams from looking like one pile.
+- Assign or ungroup an identity without reconnecting it.
 
-```bash
-curl -X PUT https://connect.trypost.it/api/social-accounts/$ID/set \
-  -H "Authorization: Bearer YOUR_API_KEY" \
-  -H "Content-Type: application/json" \
-  -d '{"set_id":"00000000-0000-0000-0000-000000000000"}'
-```
-
-Send `"set_id": null` to ungroup.
-
-Filter the account list: [`GET /social-accounts?set_id={uuid}`](/api-reference/social-accounts/list) or `?set_id=unassigned` for ungrouped identities. MCP `list-social-accounts-tool` has no `set_id` filter.
-
-MCP mirrors this: `list-social-sets-tool`, `create-social-set-tool`, `assign-social-set-tool`.
+Agents can create sets and move accounts. They cannot filter the account list by set — do that in REST or the dashboard.

@@ -1,42 +1,40 @@
 ---
 title: Authentication
-description: Bearer API keys for REST. OAuth for MCP. The two are not interchangeable.
+description: API keys for REST. OAuth for agents. The two are not interchangeable.
 icon: "key"
 ---
 
-## REST API
+Connect has two doors. They are not the same credential.
 
-Base URL:
+| | REST API | MCP (agents) |
+|---|---|---|
+| Where | `https://connect.trypost.it/api` | `https://connect.trypost.it/mcp` |
+| How | Bearer API key | OAuth (`mcp:use`) |
+| Who | Your server, CI, the [playground](https://connect.trypost.it/playground) | Cursor, Claude, ChatGPT, … |
 
-```
-https://connect.trypost.it/api
-```
+There is no `api.connect.trypost.it`. A key on `/mcp` returns **403**. An OAuth token is not a substitute for a key on `/api`.
 
-There is no `api.connect.trypost.it`. Every authenticated route needs:
+## API keys
 
-```bash
-Authorization: Bearer YOUR_API_KEY
-```
-
-Create keys in the dashboard at [API keys](https://connect.trypost.it/api-keys) or with [`POST /api-keys`](/api-reference/api-keys/create). The plain token is returned **once**.
+Create them under [API keys](https://connect.trypost.it/api-keys). The plain token is shown **once**. Connect stores a hash — if you lose it, create another.
 
 <Warning>
   Keep the key on a server. Do not ship it in a browser app or a public repo.
 </Warning>
 
-API keys are bound to the account that created them. Connect has one account per customer — every request acts on that account.
+Keys belong to your Connect account. Every call acts on that account. One customer, one account — no workspaces.
 
-The in-app [playground](https://connect.trypost.it/playground) uses the same Bearer contract.
+How to send the header, create keys from the API, and what errors look like: [API overview](/api-reference/introduction).
 
-## Rate limits
+## Agents
 
-Authenticated API routes are **60 requests / minute** per account (`429` + `Retry-After`). Local development is unlimited.
+Add `https://connect.trypost.it/mcp`, click Connect, and sign in at [connect.trypost.it](https://connect.trypost.it). Revoke assistants under [Settings → MCP](https://connect.trypost.it/settings/account/mcp).
 
-[`GET /social-accounts/{id}/boards`](/api-reference/social-accounts/boards) and [`/channels`](/api-reference/social-accounts/channels) are **60 / minute** on their own.
-
-The signed media PUT is **60 / minute per account** and **1200 / minute per IP**.
+Client-by-client setup: [MCP](/guides/mcp).
 
 ## Dashboard URLs
+
+The app at [connect.trypost.it](https://connect.trypost.it) is for your team — not the UI you ship.
 
 | Page | URL |
 |---|---|
@@ -58,61 +56,5 @@ The signed media PUT is **60 / minute per account** and **1200 / minute per IP**
 | Profile | [https://connect.trypost.it/settings/profile](https://connect.trypost.it/settings/profile) |
 | Authentication | [https://connect.trypost.it/settings/authentication](https://connect.trypost.it/settings/authentication) |
 | Forgot password | [https://connect.trypost.it/forgot-password](https://connect.trypost.it/forgot-password) |
-| Verify email | [https://connect.trypost.it/verify-email](https://connect.trypost.it/verify-email) |
-| Accept invite | `https://connect.trypost.it/invites/{invite}` |
-| Google sign-in | [https://connect.trypost.it/auth/google/redirect](https://connect.trypost.it/auth/google/redirect) |
-| GitHub sign-in | [https://connect.trypost.it/auth/github/redirect](https://connect.trypost.it/auth/github/redirect) |
-| Drafts / scheduled / published | [https://connect.trypost.it/posts/draft](https://connect.trypost.it/posts/draft), [`/posts/scheduled`](https://connect.trypost.it/posts/scheduled), [`/posts/published`](https://connect.trypost.it/posts/published) |
-| Billing processing | [https://connect.trypost.it/billing/processing](https://connect.trypost.it/billing/processing) |
 
-Password reset is `https://connect.trypost.it/reset-password/{token}` (email link). Stripe Customer Portal is [https://connect.trypost.it/settings/account/billing/portal](https://connect.trypost.it/settings/account/billing/portal).
-
-REST: `https://connect.trypost.it/api`. MCP: `https://connect.trypost.it/mcp`. There is no `api.connect.trypost.it`.
-
-## MCP
-
-Agents authenticate with **OAuth 2.1** (`mcp:use`) and Dynamic Client Registration. Add `https://connect.trypost.it/mcp`, click Connect, and sign in.
-
-<Warning>
-  A Personal Access Token on `/mcp` returns **403**. Scripts and CI should call REST.
-</Warning>
-
-Revoke assistants under [Settings → MCP](https://connect.trypost.it/settings/account/mcp). Setup: [MCP](/guides/mcp).
-
-## Errors
-
-All error bodies include a `message` field. Validation errors also include `errors`.
-
-| Status | Meaning |
-|--------|---------|
-| `200` | Success |
-| `201` | Created |
-| `204` | Deleted |
-| `401` | Missing or invalid API key |
-| `402` | Card / active subscription required |
-| `403` | Forbidden (role, or an API key sent to `/mcp`) |
-| `404` | Missing, or not on this account |
-| `422` | Validation |
-| `429` | Rate limit — wait `Retry-After` seconds |
-
-```json
-{
-  "message": "The name field is required."
-}
-```
-
-A **402** on connect or any other call means the account needs a card (X, or a third non-X identity) or lost app access. See [Billing](/guides/billing).
-
-## Response shape
-
-Resources are **unwrapped** — no `data:` envelope on a single object.
-
-Non-paginated lists (social accounts, social sets, API keys, webhooks) are a **plain JSON array**.
-
-Paginated lists wrap in Laravel's `data` / `links` / `meta`:
-
-- [`GET /posts`](/api-reference/posts/list)
-- [`GET /logs`](/api-reference/logs/list)
-- [`GET /webhooks/{id}/logs`](/api-reference/webhooks/logs)
-
-Page size is `meta.per_page` (default **25**). There is no `per_page` query. Use `page`.
+Sign-in also supports [Google](https://connect.trypost.it/auth/google/redirect) and [GitHub](https://connect.trypost.it/auth/github/redirect). Invites arrive as `https://connect.trypost.it/invites/{invite}`.

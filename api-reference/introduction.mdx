@@ -8,9 +8,41 @@ icon: "code"
 https://connect.trypost.it/api
 ```
 
-Authenticate with a Bearer token. See [Authentication](/getting-started/authentication).
+Every authenticated route needs:
+
+```
+Authorization: Bearer YOUR_API_KEY
+```
+
+Create keys in the [dashboard](https://connect.trypost.it/api-keys) or [`POST /api-keys`](/api-reference/api-keys/create). The two credentials are not interchangeable — [Authentication](/getting-started/authentication).
 
 Try the same routes in the [playground](https://connect.trypost.it/playground).
+
+## Rate limits
+
+Authenticated routes are **60 requests / minute** per account (`429` + `Retry-After`). Local development is unlimited.
+
+[`GET /social-accounts/{id}/boards`](/api-reference/social-accounts/boards) and [`/channels`](/api-reference/social-accounts/channels) are **60 / minute** on their own.
+
+The signed media PUT is **60 / minute per account** and **1200 / minute per IP**.
+
+## Errors
+
+All error bodies include a `message` field. Validation errors also include `errors`.
+
+| Status | Meaning |
+|--------|---------|
+| `200` | Success |
+| `201` | Created |
+| `204` | Deleted |
+| `401` | Missing or invalid API key |
+| `402` | Card / active subscription required |
+| `403` | Forbidden (role, or an API key sent to `/mcp`) |
+| `404` | Missing, or not on this account |
+| `422` | Validation |
+| `429` | Rate limit — wait `Retry-After` seconds |
+
+A **402** on connect or any other call means the account needs a card (X, or a third non-X identity) or lost app access. See [Billing](/guides/billing).
 
 ## Quick reference
 
@@ -36,3 +68,5 @@ These lists paginate (`data`, `links`, `meta`). Use `page`. Size is `meta.per_pa
 - [`GET /webhooks/{id}/logs`](/api-reference/webhooks/logs)
 
 Everything else that lists resources returns a **plain array**.
+
+Resources are **unwrapped** — no `data:` envelope on a single object.

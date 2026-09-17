@@ -1,114 +1,54 @@
 ---
-title: Quickstart
-description: API key, connect a network, upload a file, and publish a post.
+title: Get started
+description: Account, connected networks, then an API key or MCP. Requests live in the API reference.
 icon: "rocket"
 ---
 
-This walkthrough uses the REST API. The same flow exists in the [playground](https://connect.trypost.it/playground) and, after accounts are connected, as [MCP tools](/guides/mcp).
+You do not start by firing requests. You start by standing up the Connect account your product (or your agent) will use.
 
 <Steps>
-  <Step title="Create an account">
-    Sign up at [https://connect.trypost.it/register](https://connect.trypost.it/register). One account per customer — no workspaces.
+  <Step title="Create a Connect account">
+    Sign up at [connect.trypost.it/register](https://connect.trypost.it/register). One account per customer — no workspaces, no extra tenants.
+
+    The [dashboard](https://connect.trypost.it) is for your team: accounts, keys, billing, logs, playground. It is not the UI you ship to your users.
   </Step>
 
-  <Step title="Create an API key">
-    In the dashboard go to **[API keys](https://connect.trypost.it/api-keys)** and create a key. The plain token is shown once.
+  <Step title="Connect at least one social network">
+    Nothing publishes until an identity exists. Open [Accounts](https://connect.trypost.it/accounts) and connect the networks you need.
 
-    ```bash
-    export TRYPOST_API_KEY='your_key'
-    export TRYPOST_API='https://connect.trypost.it/api'
-    ```
+    When you ship a product, your users connect in **their** browser. Connect hosts OAuth and the pickers (including Bluesky, Mastodon, and Telegram). Your backend only starts the flow and receives them back. There is no MCP connect tool.
 
-    Every authenticated request sends `Authorization: Bearer $TRYPOST_API_KEY`.
+    How the browser flow works: [Connect accounts](/guides/connect-accounts).
+
+    Two non-X identities are free. X always counts. A third non-X account, or any X account, needs a card. See [Billing](/guides/billing).
   </Step>
 
-  <Step title="Connect a social account">
-    The API never 302s your server. It returns a URL for the **end user's browser**. After OAuth (or a Connect-hosted picker), the browser lands on *your* `redirect_url`.
+  <Step title="Get credentials">
+    **REST** — create a key under [API keys](https://connect.trypost.it/api-keys). The plain token is shown once. Keep it on a server.
 
-    ```bash
-    curl "$TRYPOST_API/social-accounts/connect/x?redirect_url=https://yourapp.com/connected" \
-      -H "Authorization: Bearer $TRYPOST_API_KEY"
-    ```
+    **Agents** — add `https://connect.trypost.it/mcp` and sign in with OAuth (`mcp:use`). An API key on `/mcp` returns 403.
 
-    ```json
-    {
-      "url": "https://twitter.com/i/oauth2/authorize?…",
-      "state": "opaque-state-token"
-    }
-    ```
-
-    Open `url` in the browser. On success Connect redirects to:
-
-    ```
-    https://yourapp.com/connected?connected=x&id={social_account_id}
-    ```
-
-    On failure the same URL receives `error` (for example `access_denied`, `payment_required`). Then list accounts:
-
-    ```bash
-    curl "$TRYPOST_API/social-accounts" \
-      -H "Authorization: Bearer $TRYPOST_API_KEY"
-    ```
-
-    Details: [Connect accounts](/guides/connect-accounts).
-  </Step>
-
-  <Step title="Upload media">
-    External file URLs are not accepted. Presign, `PUT` the bytes (no Bearer token), then use `public_url` on the post.
-
-    ```bash
-    curl -X POST "$TRYPOST_API/medias/presign" \
-      -H "Authorization: Bearer $TRYPOST_API_KEY" \
-      -H "Content-Type: application/json" \
-      -d '{"filename":"photo.jpg","content_type":"image/jpeg","size":102400}'
-    ```
-
-    ```bash
-    curl -X PUT "$UPLOAD_URL" \
-      -H "Content-Type: image/jpeg" \
-      --data-binary @photo.jpg
-    ```
-
-    Details: [Media](/guides/media).
-  </Step>
-
-  <Step title="Create and publish a post">
-    `POST /posts` always creates a **draft**. Publish with `PUT /posts/{id}` and `status=publishing`, or schedule with `status=scheduled`.
-
-    ```bash
-    curl -X POST "$TRYPOST_API/posts" \
-      -H "Authorization: Bearer $TRYPOST_API_KEY" \
-      -H "Content-Type: application/json" \
-      -d '{
-        "content": "Hello from Connect",
-        "media": [{ "url": "https://…/temp/…/photo.jpg" }],
-        "platforms": [
-          {
-            "social_account_id": "00000000-0000-0000-0000-000000000000",
-            "content_type": "x_post"
-          }
-        ]
-      }'
-    ```
-
-    ```bash
-    curl -X PUT "$TRYPOST_API/posts/$POST_ID" \
-      -H "Authorization: Bearer $TRYPOST_API_KEY" \
-      -H "Content-Type: application/json" \
-      -d '{"status":"publishing"}'
-    ```
-
-    One post can target many networks. Per-network caption and media go in `platforms[].custom_content` / `custom_media`. Details: [Posts](/guides/posts).
+    Details: [Authentication](/getting-started/authentication). Client setup: [MCP](/guides/mcp).
   </Step>
 </Steps>
 
-## What's next
+## What you can do
 
-<Columns cols={2}>
-  <Card title="Authentication" icon="key" href="/getting-started/authentication">
-    Bearer keys, MCP OAuth, and 401 / 403 / 402
+Same account, three callers: your backend (REST), an agent (MCP), and your team (dashboard).
+
+<CardGroup cols={2}>
+  <Card title="Publish" icon="newspaper" href="/guides/posts">
+    One post, many networks. Shared caption and media, optional per-network overrides. Draft, schedule, or publish now.
   </Card>
-  <Card title="Webhooks" icon="webhook" href="/guides/webhooks">
-    Signed deliveries when a post publishes or an account connects
+  <Card title="Upload media" icon="image" href="/guides/media">
+    Presign a PUT, send the file, then attach that `public_url`. External URLs are rejected. There is no asset library.
   </Card>
-</Columns>
+  <Card title="Group identities" icon="layer-group" href="/guides/social-sets">
+    Optional sets — a brand, a client, a campaign. Not a second workspace.
+  </Card>
+  <Card title="Listen for outcomes" icon="webhook" href="/guides/webhooks">
+    Signed POSTs when a post publishes or fails, or when a social account connects or disconnects.
+  </Card>
+</CardGroup>
+
+Try the live API from the [playground](https://connect.trypost.it/playground) once you have a key. When you need the exact path, body, or response, open the [API reference](/api-reference/introduction) — this page does not repeat those requests.

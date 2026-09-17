@@ -167,7 +167,7 @@
     "global": {
       "anchors": [
         {
-          "anchor": "Open Connect",
+          "anchor": "Open TryPost Connect",
           "href": "https://connect.trypost.it",
           "icon": "arrow-up-right-from-square"
         },
@@ -197,7 +197,7 @@
     ],
     "primary": {
       "type": "button",
-      "label": "Open Connect",
+      "label": "Open TryPost Connect",
       "href": "https://connect.trypost.it"
     }
   },

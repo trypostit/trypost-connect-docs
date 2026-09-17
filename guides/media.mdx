@@ -1,94 +1,50 @@
 ---
 title: Media
-description: Presign a PUT URL, upload the file, then pass public_url on the post. External URLs are rejected.
-icon: "photo"
+description: Upload the file to Connect first. Then attach that URL on the post. We do not fetch files from the internet.
+icon: "image"
 ---
 
-Connect does not download files from the public internet. A media item on a post must be a `public_url` issued by [`POST /medias/presign`](/api-reference/media/presign) (or an item Connect already hosted, with `path` set).
+Connect does not download files from a public URL. There is no asset library and no “attach this image from the web.”
 
-There is no asset library and no `POST /posts/{id}/media`.
+You ask Connect for an upload slot, put the bytes there, and pass the **public URL it gave you** when you create or update the post.
 
 ```mermaid
 sequenceDiagram
-  participant App
-  participant API as Connect API
+  participant App as Your product
+  participant Connect
   participant Storage
 
-  App->>API: POST /medias/presign
-  API-->>App: upload_url, public_url, headers
-  App->>Storage: PUT file (no Authorization)
-  Storage-->>App: 200
-  App->>API: POST /posts with media[].url = public_url
+  App->>Connect: Ask for an upload slot
+  Connect-->>App: Upload URL + public URL
+  App->>Storage: Put the file there
+  Storage-->>App: Done
+  App->>Connect: Attach that public URL on the post
 ```
 
-## 1. Presign
+The upload URL is signed. Do not send your API key to storage. It expires in **one hour**. An unused file is deleted after **7 days**; attaching it to a post keeps it.
 
-```bash
-curl -X POST https://connect.trypost.it/api/medias/presign \
-  -H "Authorization: Bearer YOUR_API_KEY" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "filename": "clip.mp4",
-    "content_type": "video/mp4",
-    "size": 10485760
-  }'
-```
+Request shapes: [Presign](/api-reference/media/presign) and [Upload](/api-reference/media/upload). Agents use `request-media-upload-tool`, then the same public URL on create or update.
 
-```json
-{
-  "upload_url": "https://…",
-  "public_url": "https://…/temp/{account_id}/{ulid}_clip.mp4",
-  "key": "temp/{account_id}/{ulid}_clip.mp4",
-  "expires_in": 3600,
-  "headers": { "Content-Type": "video/mp4" }
-}
-```
+## What you can send
 
-Allowed `content_type` values: `image/jpeg`, `image/jpg`, `image/png`, `image/gif`, `image/webp`, `video/mp4`, `video/quicktime`, `application/pdf`.
+| Kind | Formats | Cap |
+|---|---|---|
+| Image | JPEG, PNG, GIF, WebP | 10 MB |
+| Video | MP4, MOV | 1 GB |
+| Document | PDF | 100 MB |
 
-Upload caps (rejected at presign when `size` is sent): **10 MB** image, **1 GB** video, **100 MB** PDF. Networks may impose tighter limits at schedule or publish time.
+No standalone audio. No WebM. Networks often impose a tighter cap when you **schedule or publish** — drafts are not blocked. See the [platform pages](/platforms/linkedin).
 
-`upload_url` expires in `expires_in` seconds (1 hour). An unused temp object is deleted after **7 days**. Attaching it to a post moves it out of `temp/`.
+Optional alt text (up to 2 000 characters). Each network may truncate it further.
 
-The signed PUT is rate-limited: **60 / minute per account**, **1200 / minute per IP**.
+## Per-network media
 
-## 2. PUT the file
+A post has shared media. One network can override that with its own files, inherit the shared set, or publish with **no** media.
 
-Send the bytes to `upload_url` with the returned `headers`. **Do not** send `Authorization`.
+Limits (count, GIF vs still, duration) run against whatever that network will actually send.
 
-On Cloud this is an object-storage signed URL. Locally it is a signed [`PUT /medias/{token}`](/api-reference/media/upload). You never call that path with a Bearer token.
+## What does not work
 
-```bash
-curl -X PUT "$UPLOAD_URL" \
-  -H "Content-Type: video/mp4" \
-  --data-binary @clip.mp4
-```
-
-Success is `200` with an empty body.
-
-## 3. Attach on the post
-
-```json
-{
-  "media": [
-    {
-      "url": "https://…/temp/…/clip.mp4",
-      "meta": { "alt_text": "Product shot" }
-    }
-  ]
-}
-```
-
-`url` must be that `public_url`. A random CDN or `https://example.com/photo.jpg` returns **422**.
-
-`meta.alt_text` is optional (max **2000**). Publishers truncate further to each network's own cap.
-
-The same shape is valid on `platforms[].custom_media` for a per-network override. `null` (or omitting the key) inherits the shared `media`. `[]` is an explicit no-media publish for that network.
-
-MCP: `request-media-upload-tool` issues the same presign. Then pass `public_url` to `create-post-tool` / `update-post-tool` as `media[].url`. There is no attach-from-URL tool.
-
-## Types
-
-A media item is one of **image**, **video**, or **document** (PDF). There is no standalone audio type. WebM is not accepted.
-
-Per-network counts, GIF/MOV rules, and byte/duration caps are enforced when you **schedule or publish**, against each platform's **effective** media (`custom_media` when set, otherwise root `media`). Drafts are not blocked. Ask MCP `list-content-types-tool` or see the [platform pages](/platforms/linkedin).
+- Pasting `https://example.com/photo.jpg` (or any CDN you host)
+- Browsing a library of past uploads
+- Attaching a file after the post exists as a separate “media” step — it goes on the post itself

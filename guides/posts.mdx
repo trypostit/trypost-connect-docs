@@ -4,121 +4,71 @@ description: One post, many networks. Shared caption and media, optional per-net
 icon: "newspaper"
 ---
 
-A Connect post is one object with `content` + `media` and a `platforms[]` array — one row per social account.
+A Connect post is one object you send to several social accounts at once. Shared caption and media, then optional tweaks per network.
 
-```
-POST /posts          → always a draft
-PUT  /posts/{id}     → edit, schedule, or publish
-```
+You always **create a draft**. Then you schedule it or publish it now. There is no separate “publish” button on the API — changing status does that. Paths: [Create](/api-reference/posts/create) and [Update](/api-reference/posts/update).
 
-There is no `POST /posts/{id}/publish`. Immediate publish is `PUT` with `"status": "publishing"`.
+Agents follow the same idea: create a draft, then publish or schedule. They cannot connect a new network.
 
-## Create a draft
+## Life of a post
 
-[`POST /posts`](/api-reference/posts/create) requires at least one `platforms[]` entry. MCP `create-post-tool` may omit `platforms` — Connect still creates a disabled row per connected account.
+| Status | Meaning |
+|---|---|
+| Draft | Editable |
+| Scheduled | Goes out at the time you set |
+| Publishing | The job is running. No event for this step. |
+| Published | Every enabled network succeeded |
+| Partially published | Some networks failed |
+| Failed | Every enabled network failed |
 
-```json
-{
-  "content": "Launch day",
-  "media": [{ "url": "https://…/temp/…/photo.jpg" }],
-  "scheduled_at": "2026-05-10T15:30:00Z",
-  "platforms": [
-    {
-      "social_account_id": "…",
-      "content_type": "x_post"
-    },
-    {
-      "social_account_id": "…",
-      "content_type": "linkedin_post",
-      "custom_content": "Longer LinkedIn version"
-    }
-  ]
-}
-```
+A post that already published, is publishing, partially published, or failed cannot be edited.
 
-`scheduled_at` on create is stored on the draft. Status stays `draft` until you `PUT` `status=scheduled` or `status=publishing`.
+Each network on the post has its own status (pending, publishing, retrying, published, failed), plus a public URL and an error after the attempt.
 
-If you omit `scheduled_at`, it is `null`.
+A time on create is just stored. The post stays a draft until you actually schedule or publish.
 
 ## Per-network caption and media
 
-`custom_content` and `custom_media` are **siblings of `meta`**, never inside it.
+Most of the time every network gets the shared caption and files. When LinkedIn needs a longer version, or Instagram should go out without the video, you override **that** row.
 
-| Value | Meaning |
+| You want | What to do |
 |---|---|
-| Key omitted / `null` | Inherit the post `content` / `media` |
-| `""` / `[]` | Explicit override: no caption / no media |
+| Inherit the shared post | Leave the override empty |
+| Different caption / files | Set a custom caption or custom media |
+| No caption / no media on that network | Send an explicit empty override |
 
-On update, send `null` to clear an override and inherit again. Omit the key to leave the stored value.
+Length and media rules use what that network will actually receive. A long shared caption is fine if the overflowing network has a short custom one.
 
-Caption length and media compatibility run against the **effective** values per platform. A long shared caption is fine if the overflowing network has a short `custom_content`.
+## Settings that only apply to one network
 
-## Per-network `meta`
+Some networks need extra fields before they will accept a publish: a Pinterest board, a TikTok privacy level, a Discord channel. Those live next to the caption, not inside a generic blob.
 
-Settings that only apply to one account — Pinterest `board_id`, TikTok `privacy_level`, Discord `channel_id`, and so on. Full key list: [`PUT /posts/{id}`](/api-reference/posts/update#per-platform-meta).
+Drafts are not checked. The check runs when you schedule or publish. Full key list: [Per-platform meta](/api-reference/posts/update#per-platform-meta).
 
-Required-to-publish keys are checked when `status` is `scheduled` or `publishing` **and** the request includes `platforms[]`. Drafts are not checked.
+## Formats
 
-## Publish or schedule
+There is no live REST catalog of formats. Use the [platform pages](/platforms/linkedin) or, from an agent, `list-content-types-tool`.
 
-```bash
-curl -X PUT https://connect.trypost.it/api/posts/$POST_ID \
-  -H "Authorization: Bearer YOUR_API_KEY" \
-  -H "Content-Type: application/json" \
-  -d '{"status":"publishing"}'
-```
-
-```bash
-curl -X PUT https://connect.trypost.it/api/posts/$POST_ID \
-  -H "Authorization: Bearer YOUR_API_KEY" \
-  -H "Content-Type: application/json" \
-  -d '{"status":"scheduled","scheduled_at":"2026-12-31T15:30:00Z"}'
-```
-
-On update, `platforms[]` is keyed by the post-platform **`id`** (from `GET /posts/{id}`), not `social_account_id`. Platforms you omit are **disabled**.
-
-A post that is already `published`, `publishing`, `partially_published`, or `failed` cannot be edited (`422`).
-
-## Statuses
-
-| Post `status` | Meaning |
+| Network | Formats |
 |---|---|
-| `draft` | Editable |
-| `scheduled` | Will publish at `scheduled_at` |
-| `publishing` | Job dispatched |
-| `published` | Every enabled platform succeeded |
-| `partially_published` | Some platforms failed |
-| `failed` | All enabled platforms failed |
+| LinkedIn profile | Post (text, images, video, or one PDF) |
+| LinkedIn Page | Page post (same media rules) |
+| X | Post |
+| Facebook | Post, reel, story |
+| Instagram (either connection) | Feed, reel, story |
+| TikTok | Video, photo carousel |
+| YouTube | Short only |
+| Threads | Post |
+| Pinterest | Pin, video pin, carousel |
+| Bluesky | Post |
+| Mastodon | Post |
+| Telegram | Post |
+| Discord | Channel message |
 
-Each `platforms[]` row has its own `status` (`pending`, `publishing`, `retrying`, `published`, `failed`), plus `platform_url` and `error_message` after publish.
+There is no LinkedIn carousel format and no Instagram carousel format. A LinkedIn PDF is a regular post with a document. An Instagram carousel is a feed post with several images.
 
-## Content types
+## After it goes out
 
-There is no REST `/content-types` catalog. Use the [platform pages](/platforms/linkedin) or MCP `list-content-types-tool`.
-
-| Network | `content_type` |
-|---|---|
-| LinkedIn profile | `linkedin_post` |
-| LinkedIn Page | `linkedin_page_post` |
-| X | `x_post` |
-| Facebook | `facebook_post`, `facebook_reel`, `facebook_story` |
-| Instagram (either connection) | `instagram_feed`, `instagram_reel`, `instagram_story` |
-| TikTok | `tiktok_video`, `tiktok_photo` |
-| YouTube | `youtube_short` |
-| Threads | `threads_post` |
-| Pinterest | `pinterest_pin`, `pinterest_video_pin`, `pinterest_carousel` |
-| Bluesky | `bluesky_post` |
-| Mastodon | `mastodon_post` |
-| Telegram | `telegram_post` |
-| Discord | `discord_message` |
-
-There is no `linkedin_carousel` / `instagram_carousel`. LinkedIn documents are `linkedin_post` + a PDF. Instagram carousels are `instagram_feed` with multiple images.
-
-## MCP
-
-1. `list-social-accounts-tool`
-2. `list-content-types-tool` (limits and valid types)
-3. Pinterest / Discord: `list-pinterest-boards-tool` / `list-discord-channels-tool`
-4. `request-media-upload-tool` → PUT → `create-post-tool` with `media[].url`
-5. `preview-post-tool` (optional)
-6. `publish-post-tool` now, or `update-post-tool` with `status=scheduled`
+- [Preview](/api-reference/posts/preview) shows the sanitized caption per network before you publish.
+- [Metrics](/api-reference/posts/metrics) pull engagement after it is live (cached a few minutes). LinkedIn **profile** posts do not support metrics.
+- [Webhooks](/guides/webhooks) fire on the outcome, not on “publishing.”

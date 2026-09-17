@@ -1,22 +1,16 @@
 ---
 title: MCP
-description: Agents use Connect over MCP — OAuth, tools, and the publish workflow. No connect tool.
-icon: "microchip-ai"
+description: Point an agent at Connect. Same account as the REST API. OAuth, not API keys. No connect tool.
+icon: "microchip"
 ---
 
-[MCP](https://modelcontextprotocol.io) is how agents use the same Connect account as the [REST API](/api-reference/introduction) — posts, media, social accounts, sets, webhooks, logs — called as tools.
+[MCP](https://modelcontextprotocol.io) is how Cursor, Claude, ChatGPT, and similar clients use your Connect account as tools — posts, media, social accounts, sets, webhooks, logs.
 
 ```
 https://connect.trypost.it/mcp
 ```
 
-## Authentication
-
-OAuth 2.1 with Dynamic Client Registration, PKCE, and the `mcp:use` scope. Add the URL, click Connect, sign in at [connect.trypost.it](https://connect.trypost.it).
-
-<Warning>
-  API keys authenticate [`https://connect.trypost.it/api`](/getting-started/authentication) only. A Bearer token on `/mcp` returns **403**.
-</Warning>
+The agent signs in with OAuth (`mcp:use`). An API key on this URL returns **403**. Keys are for [REST](/getting-started/authentication) only.
 
 Revoke assistants under [Settings → MCP](https://connect.trypost.it/settings/account/mcp).
 
@@ -56,84 +50,40 @@ Revoke assistants under [Settings → MCP](https://connect.trypost.it/settings/a
   </Accordion>
 </AccordionGroup>
 
-## Recommended workflow
+## How an agent should work
 
-1. **`list-social-accounts-tool`**
-2. **`list-content-types-tool`** — valid `content_type` values and media caps (MCP-only; there is no REST catalog)
-3. **`list-pinterest-boards-tool`** / **`list-discord-channels-tool`** when those networks are in the post
-4. **`request-media-upload-tool`** — PUT the file to `upload_url` (no Authorization), then pass `public_url` as `media[].url`
-5. **`create-post-tool`** — `content`, optional `media[]`, `platforms[]` (`custom_content` / `custom_media` / `meta`)
-6. **`preview-post-tool`** (optional)
-7. **`publish-post-tool`** now, or **`update-post-tool`** with `status=scheduled`
+1. List connected social accounts.
+2. Ask for the format catalog (`list-content-types-tool`) — valid types and media caps. REST has no catalog; the [platform pages](/platforms/linkedin) are the other source.
+3. For Pinterest or Discord, list boards or channels first.
+4. Request an upload slot, put the file, then pass that public URL. External URLs are rejected. There is no attach-from-URL tool and no asset library.
+5. Create a draft. Preview if you want.
+6. Publish now, or schedule.
 
-Connecting a new network is still [`GET /social-accounts/connect/{platform}`](/guides/connect-accounts) in a browser.
+Connecting a new network is still a [browser flow](/guides/connect-accounts). The agent cannot start OAuth.
 
-<Warning>
-  External URLs are not accepted. There is no attach-from-URL tool and no asset library.
-</Warning>
+## What the tools cover
 
-## Tools
+| Area | What the agent can do |
+|---|---|
+| Posts | List, get, create a draft, update a draft, publish, preview, delete, metrics |
+| Media | Request an upload slot (same as REST presign) |
+| Accounts | List, disconnect, assign a set, list Pinterest boards and Discord channels |
+| Sets | Full create / update / delete |
+| Webhooks | Same events and HMAC as [Webhooks](/guides/webhooks) |
+| Keys and logs | List and create keys (plain secret once). List activity (90 days). No get-one-log tool — use REST for that. |
 
-### Posts
+Create-post may omit which accounts to target (every connected identity is added, disabled until you enable rows). REST create requires at least one. Update cannot jump straight to “publishing” — that is `publish-post-tool`.
 
-| Tool | Description |
-|------|-------------|
-| **list-posts-tool** | Newest `scheduled_at` first. `status` is `draft` \| `scheduled` \| `published` \| `failed` (`published` includes `partially_published`). `search` matches caption. `limit` 1–100, default 50. REST list has **no** these filters — only `page`. |
-| **get-post-tool** | One post, including `platforms[].custom_content`, `custom_media`, and `meta`. |
-| **create-post-tool** | Draft. `content` (max 10 000), optional `scheduled_at` (status stays `draft`), `media[]` (`public_url` after the PUT). `platforms[]` is optional here (REST create requires `min:1`). |
-| **update-post-tool** | Editable drafts only. `status` is `draft` \| `scheduled` — not `publishing`. `platforms[]` keyed by post-platform **`id`**. Send `custom_*` as `null` to inherit again. Immediate publish is `publish-post-tool`. |
-| **publish-post-tool** | Publish a draft. Optional future `scheduled_at`. Validates stored required meta and effective media. `IsDestructive`. |
-| **preview-post-tool** | Per-platform sanitized caption (effective `custom_content`). |
-| **request-media-upload-tool** | Presigned PUT. Then pass `public_url` on create/update. |
-| **delete-post-tool** | Permanently delete. `IsDestructive`. |
-| **get-post-metrics-tool** | Engagement for a published post. |
-
-`platforms[].meta` matches REST — [Per-platform meta](/api-reference/posts/update#per-platform-meta).
-
-### Social accounts and sets
-
-| Tool | Description |
-|------|-------------|
-| **list-social-accounts-tool** | `id`, `set_id`, `platform`, `display_name`, `username`, `avatar_url`, `status`. No `set_id` filter (REST has `?set_id=`). |
-| **assign-social-set-tool** | Move an account into a set, or `set_id` null to ungroup. |
-| **disconnect-social-account-tool** | Disconnect. `IsDestructive`. |
-| **list-pinterest-boards-tool** | Boards for `account_id` → `meta.board_id`. Needs create-post permission. |
-| **list-discord-channels-tool** | Channels for `account_id` → `meta.channel_id`. |
-| **list-social-sets-tool** / **get-social-set-tool** / **create-social-set-tool** / **update-social-set-tool** / **delete-social-set-tool** | Sets. |
-
-### Platforms
-
-| Tool | Description |
-|------|-------------|
-| **list-content-types-tool** | Per-platform `content_type` catalog and media caps. |
-
-### Account, keys, logs, webhooks
-
-| Tool | Description |
-|------|-------------|
-| **get-account-tool** | Current account (`id`, `name`, timestamps). |
-| **list-api-keys-tool** / **create-api-key-tool** / **delete-api-key-tool** | Tokens. Create returns the key metadata **plus** a `token` field (the plain secret). REST create uses `{ token, plain_token }`. Owner / Admin. |
-| **list-logs-tool** | Newest first. Retained 90 days. Each of `type`, `status`, `platform` is a **single** value (or `all`) — REST list accepts repeatable query params plus `from` / `to` / `account_search`. Also: `action`, `social_account_id`, `search`, `days` (1–90), `limit` (1–100, default 50). There is no get-log MCP tool — use REST [`GET /logs/{id}`](/api-reference/logs/get). |
-| **list-webhooks-tool** | List. Secrets omitted. |
-| **get-webhook-tool** | One webhook, includes `signing_secret`. |
-| **create-webhook-tool** | `endpoint` + `events[]` (includes `account.connected` / `account.disconnected`). No test ping. |
-| **update-webhook-tool** | `endpoint`, `events`, `status`. |
-| **delete-webhook-tool** | Delete webhook and logs. `IsDestructive`. |
-| **send-webhook-test-tool** | Signed `webhook.test`. |
-| **rotate-webhook-secret-tool** | New secret immediately. `IsDestructive`. |
-| **list-webhook-logs-tool** | `webhook_id`, `limit` 1–100 (default 50). Not paginated like REST. |
-| **replay-webhook-log-tool** | New delivery even if the webhook is paused or disabled. |
-
-## Troubleshooting
+## If it fails
 
 <AccordionGroup>
-  <Accordion title="HTTP 402 — Active subscription required">
-    The OAuth grant is fine; the account lost app access. Open [connect.trypost.it](https://connect.trypost.it), subscribe, reconnect. See [Billing](/guides/billing).
+  <Accordion title="Active subscription required">
+    OAuth worked; the account lost app access. Open [connect.trypost.it](https://connect.trypost.it), subscribe, reconnect. See [Billing](/guides/billing).
   </Accordion>
-  <Accordion title="HTTP 401 — Unauthenticated">
-    Session expired or the token was revoked. Run the client's Connect flow again.
+  <Accordion title="Unauthenticated">
+    The session expired or the token was revoked. Run the client's Connect flow again.
   </Accordion>
-  <Accordion title="HTTP 403 — MCP OAuth authorization required">
-    The request used an API key (or an OAuth token without `mcp:use`). Remove any `Authorization` header from the MCP config.
+  <Accordion title="MCP OAuth authorization required">
+    The client sent an API key. Remove any `Authorization` header from the MCP config.
   </Accordion>
 </AccordionGroup>
