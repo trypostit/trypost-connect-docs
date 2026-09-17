@@ -1,0 +1,29 @@
+---
+title: Update webhook
+api: "PUT /webhooks/{id}"
+description: Change endpoint, events, or status. Signing secret omitted.
+---
+
+<ParamField path="id" type="string" required>
+  Webhook UUID.
+</ParamField>
+<ParamField body="endpoint" type="string">
+  Public URL. Same SSRF rules as create.
+</ParamField>
+<ParamField body="events" type="array">
+  At least one allowed event.
+</ParamField>
+<ParamField body="status" type="string">
+  `enabled` or `disabled`. Re-enabling a paused webhook resets consecutive failures.
+</ParamField>
+
+Does not send a test request.
+
+<RequestExample>
+```bash
+curl -X PUT https://connect.trypost.it/api/webhooks/a1b2c3d4-e5f6-7890-abcd-ef1234567890 \
+  -H "Authorization: Bearer YOUR_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{"status":"disabled"}'
+```
+</RequestExample>

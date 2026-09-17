@@ -1,0 +1,29 @@
+---
+title: List social sets
+api: "GET /social-sets"
+description: All sets on this account, as a plain array.
+---
+
+Ordered by `name`. Each item includes `social_accounts_count`.
+
+<RequestExample>
+```bash
+curl https://connect.trypost.it/api/social-sets \
+  -H "Authorization: Bearer YOUR_API_KEY"
+```
+</RequestExample>
+
+<ResponseExample>
+```json
+[
+  {
+    "id": "00000000-0000-0000-0000-000000000000",
+    "name": "Launch",
+    "color": "#2563EB",
+    "social_accounts_count": 2,
+    "created_at": "2026-01-14T12:00:00+00:00",
+    "updated_at": "2026-01-14T12:00:00+00:00"
+  }
+]
+```
+</ResponseExample>

@@ -1,0 +1,57 @@
+---
+title: Get post
+api: "GET /posts/{id}"
+description: One post, including per-platform overrides and publish state.
+---
+
+## Request
+
+<ParamField path="id" type="string" required>
+  Post UUID.
+</ParamField>
+
+## Response
+
+<ResponseField name="id" type="string">Post UUID.</ResponseField>
+<ResponseField name="content" type="string">Shared caption. May be empty.</ResponseField>
+<ResponseField name="media" type="array">
+  Shared media. Each item has `id`, `path`, `url`, `type` (`image` \| `video` \| `document`), `mime_type`, `original_filename`, optional `size`, optional `meta.alt_text`. Empty array if none.
+</ResponseField>
+<ResponseField name="status" type="string">
+  `draft`, `scheduled`, `publishing`, `published`, `partially_published`, or `failed`.
+</ResponseField>
+<ResponseField name="scheduled_at" type="string">
+  `Y-m-d H:i:s`. `null` on unscheduled drafts.
+</ResponseField>
+<ResponseField name="published_at" type="string">
+  `Y-m-d H:i:s`. `null` until fully published.
+</ResponseField>
+<ResponseField name="platforms" type="array">
+  One row per targeted social account.
+  <Expandable>
+    <ResponseField name="id" type="string">Post-platform UUID. Use this on update, not `social_account_id`.</ResponseField>
+    <ResponseField name="platform" type="string">Platform slug.</ResponseField>
+    <ResponseField name="content_type" type="string">Format, or `null`.</ResponseField>
+    <ResponseField name="custom_content" type="string">Override caption, or `null` to inherit.</ResponseField>
+    <ResponseField name="custom_media" type="array">Override media, or `null` to inherit.</ResponseField>
+    <ResponseField name="meta" type="object">Per-network settings. Unknown keys are dropped on write.</ResponseField>
+    <ResponseField name="status" type="string">`pending`, `publishing`, `retrying`, `published`, or `failed`.</ResponseField>
+    <ResponseField name="enabled" type="boolean">Whether this row publishes.</ResponseField>
+    <ResponseField name="platform_url" type="string">Public URL after publish, or `null`.</ResponseField>
+    <ResponseField name="published_at" type="string">`Y-m-d H:i:s`, or `null`.</ResponseField>
+    <ResponseField name="error_message" type="string">Last publish error, or `null`.</ResponseField>
+    <ResponseField name="display_name" type="string">Snapshot name (survives disconnect).</ResponseField>
+    <ResponseField name="display_username" type="string">Snapshot handle.</ResponseField>
+    <ResponseField name="display_avatar" type="string">Snapshot avatar URL.</ResponseField>
+    <ResponseField name="social_account" type="object">Same shape as [list social accounts](/api-reference/social-accounts/list). `null` if the identity was removed.</ResponseField>
+  </Expandable>
+</ResponseField>
+<ResponseField name="created_at" type="string">`Y-m-d H:i:s`</ResponseField>
+<ResponseField name="updated_at" type="string">`Y-m-d H:i:s`</ResponseField>
+
+<RequestExample>
+```bash
+curl https://connect.trypost.it/api/posts/9f1a2b3c-4d5e-6f7a-8b9c-0d1e2f3a4b5c \
+  -H "Authorization: Bearer YOUR_API_KEY"
+```
+</RequestExample>

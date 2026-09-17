@@ -1,0 +1,54 @@
+---
+title: List social accounts
+api: "GET /social-accounts"
+description: Connected identities as a plain array. Optional set filter.
+---
+
+<Note>
+  Read accounts by `id`, not by `platform`. The same network can appear more than once.
+</Note>
+
+## Request
+
+<ParamField query="set_id" type="string">
+  Limit to one [social set](/guides/social-sets) UUID. Pass `unassigned` for accounts with `set_id: null`. Omit (or any other value) for the full list.
+</ParamField>
+
+## Response
+
+Plain array.
+
+<ResponseField name="id" type="string">Social account UUID.</ResponseField>
+<ResponseField name="set_id" type="string">Social set UUID, or `null`.</ResponseField>
+<ResponseField name="platform" type="string">
+  `linkedin`, `linkedin-page`, `x`, `facebook`, `instagram`, `instagram-facebook`, `tiktok`, `youtube`, `threads`, `pinterest`, `bluesky`, `mastodon`, `telegram`, `discord`.
+</ResponseField>
+<ResponseField name="display_name" type="string">Display name.</ResponseField>
+<ResponseField name="username" type="string">Handle.</ResponseField>
+<ResponseField name="avatar_url" type="string">Avatar URL.</ResponseField>
+<ResponseField name="status" type="string">
+  `connected`, `disconnected`, or `token_expired`.
+</ResponseField>
+
+<RequestExample>
+```bash
+curl https://connect.trypost.it/api/social-accounts \
+  -H "Authorization: Bearer YOUR_API_KEY"
+```
+</RequestExample>
+
+<ResponseExample>
+```json
+[
+  {
+    "id": "b2c3d4e5-f6a7-8b9c-0d1e-2f3a4b5c6d7e",
+    "set_id": null,
+    "platform": "linkedin",
+    "display_name": "Jane Doe",
+    "username": "janedoe",
+    "avatar_url": "https://media.licdn.com/…/avatar.jpg",
+    "status": "connected"
+  }
+]
+```
+</ResponseExample>

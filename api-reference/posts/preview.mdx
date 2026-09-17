@@ -1,0 +1,34 @@
+---
+title: Preview post
+api: "GET /posts/{id}/preview"
+description: Per-platform sanitized caption using each row's effective content.
+---
+
+<ParamField path="id" type="string" required>
+  Post UUID.
+</ParamField>
+
+Uses each **enabled** platform's effective caption (`custom_content` when set, otherwise the post `content`) and applies that network's sanitizer.
+
+<ResponseField name="post_id" type="string">Post UUID.</ResponseField>
+<ResponseField name="original_content" type="string">Root `content` before sanitizing.</ResponseField>
+<ResponseField name="original_length" type="integer">Character length of `original_content`.</ResponseField>
+<ResponseField name="platforms" type="array">
+  One row per enabled platform.
+  <Expandable>
+    <ResponseField name="post_platform_id" type="string">Post-platform UUID.</ResponseField>
+    <ResponseField name="platform" type="string">Platform slug.</ResponseField>
+    <ResponseField name="content_type" type="string">Format, or `null`.</ResponseField>
+    <ResponseField name="sanitized_content" type="string">Caption after the network sanitizer.</ResponseField>
+    <ResponseField name="sanitized_length" type="integer">Length of `sanitized_content`.</ResponseField>
+    <ResponseField name="max_content_length" type="integer">Hard caption cap for that network.</ResponseField>
+    <ResponseField name="truncated" type="boolean">`true` when sanitizing shortened the effective caption.</ResponseField>
+  </Expandable>
+</ResponseField>
+
+<RequestExample>
+```bash
+curl https://connect.trypost.it/api/posts/9f1a2b3c-4d5e-6f7a-8b9c-0d1e2f3a4b5c/preview \
+  -H "Authorization: Bearer YOUR_API_KEY"
+```
+</RequestExample>

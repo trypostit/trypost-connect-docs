@@ -1,0 +1,29 @@
+---
+title: List webhook logs
+api: "GET /webhooks/{id}/logs"
+description: Delivery logs for one webhook. Paginated.
+---
+
+<ParamField path="id" type="string" required>
+  Webhook UUID.
+</ParamField>
+<ParamField query="page" type="integer">
+  Page number.
+</ParamField>
+
+<ResponseField name="id" type="string">Log UUID (envelope `id` for that attempt).</ResponseField>
+<ResponseField name="event_type" type="string">Event name or `webhook.test`.</ResponseField>
+<ResponseField name="payload" type="object">Signed envelope.</ResponseField>
+<ResponseField name="response_status" type="integer">HTTP status from the receiver, or `null`.</ResponseField>
+<ResponseField name="response_body" type="string">Truncated response body.</ResponseField>
+<ResponseField name="delivered_at" type="string">ISO 8601, or `null`.</ResponseField>
+<ResponseField name="failed_at" type="string">ISO 8601, or `null`.</ResponseField>
+<ResponseField name="attempts" type="integer">Attempt count.</ResponseField>
+<ResponseField name="created_at" type="string">ISO 8601.</ResponseField>
+
+<RequestExample>
+```bash
+curl https://connect.trypost.it/api/webhooks/a1b2c3d4-e5f6-7890-abcd-ef1234567890/logs \
+  -H "Authorization: Bearer YOUR_API_KEY"
+```
+</RequestExample>

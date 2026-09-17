@@ -1,0 +1,18 @@
+---
+title: Get log
+api: "GET /logs/{id}"
+description: One activity-log row, including old/new values when present.
+---
+
+<ParamField path="id" type="string" required>
+  Log UUID.
+</ParamField>
+
+Same fields as [list](/api-reference/logs/list), plus a nested `social_account` when one is attached (`id`, `username`, `display_name`, `display_label`, `avatar_url`).
+
+<RequestExample>
+```bash
+curl https://connect.trypost.it/api/logs/9f1a2b3c-4d5e-6f7a-8b9c-0d1e2f3a4b5c \
+  -H "Authorization: Bearer YOUR_API_KEY"
+```
+</RequestExample>

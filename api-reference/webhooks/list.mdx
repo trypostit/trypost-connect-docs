@@ -1,0 +1,16 @@
+---
+title: List webhooks
+api: "GET /webhooks"
+description: Outgoing webhooks as a plain array. Signing secrets omitted.
+---
+
+Requires **manage webhooks**. Newest first. **Plain array.** `signing_secret` is omitted — use [get](/api-reference/webhooks/get).
+
+Each item: `id`, `endpoint`, `events`, `status` (`enabled` \| `disabled` \| `paused`), `last_sent_at`, `paused_at`, `consecutive_failures`, `created_at`, `updated_at`. You cannot set `paused` yourself — Connect pauses after repeated delivery failures. Re-enable with [update](/api-reference/webhooks/update) (`status=enabled`).
+
+<RequestExample>
+```bash
+curl https://connect.trypost.it/api/webhooks \
+  -H "Authorization: Bearer YOUR_API_KEY"
+```
+</RequestExample>

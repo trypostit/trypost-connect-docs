@@ -1,0 +1,73 @@
+---
+title: List logs
+api: "GET /logs"
+description: Account activity log, paginated. Newest first.
+---
+
+## Request
+
+Logs are retained **90 days**. Repeatable filters accept one value or several (`type=publishing&type=webhooks`).
+
+<ParamField query="type" type="string">
+  `publishing`, `connections`, `webhooks`. Repeatable.
+</ParamField>
+<ParamField query="status" type="string">
+  `success`, `failed`, `pending`, `skipped`. Repeatable.
+</ParamField>
+<ParamField query="platform" type="string">
+  Platform or network slug. Repeatable.
+</ParamField>
+<ParamField query="action" type="string">
+  One of: `account.connected`, `account.disconnected`, `account.token_expired`, `account.updated`, `post.published`, `post.failed`, `post.publishing`, `webhook.created`, `webhook.updated`, `webhook.deleted`, `webhook.delivered`, `webhook.failed`, `webhook.pending`.
+</ParamField>
+<ParamField query="search" type="string">
+  Free text. Max 255.
+</ParamField>
+<ParamField query="account_search" type="string">
+  Filter by social-account display name / handle. Max 255.
+</ParamField>
+<ParamField query="social_account_id" type="string">
+  Repeatable social account UUIDs.
+</ParamField>
+<ParamField query="days" type="integer">
+  Last N days (1–90).
+</ParamField>
+<ParamField query="from" type="string">
+  Start date.
+</ParamField>
+<ParamField query="to" type="string">
+  End date (`after_or_equal:from`).
+</ParamField>
+<ParamField query="page" type="integer">
+  Page number.
+</ParamField>
+
+## Response
+
+Pagination envelope. Each row:
+
+<ResponseField name="id" type="string">Log UUID.</ResponseField>
+<ResponseField name="type" type="string">`publishing` \| `connections` \| `webhooks`</ResponseField>
+<ResponseField name="action" type="string">Action slug.</ResponseField>
+<ResponseField name="title" type="string">Human title.</ResponseField>
+<ResponseField name="message" type="string">Human message.</ResponseField>
+<ResponseField name="user_id" type="string">Acting user, or `null`.</ResponseField>
+<ResponseField name="platform" type="string">Platform slug, or `null`.</ResponseField>
+<ResponseField name="social_account_id" type="string">Related identity, or `null`.</ResponseField>
+<ResponseField name="status" type="string">`success` \| `failed` \| `pending` \| `skipped`</ResponseField>
+<ResponseField name="endpoint" type="string">Related HTTP path when present.</ResponseField>
+<ResponseField name="url" type="string">Related URL when present.</ResponseField>
+<ResponseField name="old_values" type="object">Previous values, or `null`.</ResponseField>
+<ResponseField name="new_values" type="object">New values, or `null`.</ResponseField>
+<ResponseField name="ip_address" type="string">Caller IP, or `null`.</ResponseField>
+<ResponseField name="user_agent" type="string">Caller user agent, or `null`.</ResponseField>
+<ResponseField name="created_at" type="string">ISO 8601.</ResponseField>
+
+List does **not** nest `social_account`. [Get](/api-reference/logs/get) does.
+
+<RequestExample>
+```bash
+curl "https://connect.trypost.it/api/logs?type=publishing&status=failed" \
+  -H "Authorization: Bearer YOUR_API_KEY"
+```
+</RequestExample>

@@ -1,0 +1,49 @@
+---
+title: Create API key
+api: "POST /api-keys"
+description: Create a key. The plain token is returned only here.
+---
+
+Requires **manage team**.
+
+<ParamField body="name" type="string" required>
+  Max 255.
+</ParamField>
+<ParamField body="expires_at" type="string">
+  Optional. Must be today or later. Date-only values are stored as end of that day. Omit for a non-expiring key.
+</ParamField>
+
+<ResponseField name="token" type="object">
+  Same shape as [list](/api-reference/api-keys/list).
+</ResponseField>
+<ResponseField name="plain_token" type="string">
+  Bearer token. Never returned again.
+</ResponseField>
+
+<Warning>
+  Connect stores a hash. If you lose `plain_token`, create a new key.
+</Warning>
+
+<RequestExample>
+```bash
+curl -X POST https://connect.trypost.it/api/api-keys \
+  -H "Authorization: Bearer YOUR_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{"name":"CI pipeline"}'
+```
+</RequestExample>
+
+<ResponseExample>
+```json
+{
+  "token": {
+    "id": "a7b8c9d0-e1f2-3a4b-5c6d-7e8f9a0b1c2d",
+    "name": "CI pipeline",
+    "last_used_at": null,
+    "expires_at": null,
+    "created_at": "2026-01-14T12:00:00+00:00"
+  },
+  "plain_token": "9f1a2b3c4d5e6f7a8b9c0d1e2f3a4b5c…"
+}
+```
+</ResponseExample>

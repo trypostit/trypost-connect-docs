@@ -1,0 +1,20 @@
+---
+title: List API keys
+api: "GET /api-keys"
+description: Metadata for Personal Access Tokens. Plain array. Secrets are never listed.
+---
+
+Requires **manage team** (Owner / Admin).
+
+<ResponseField name="id" type="string">Key UUID.</ResponseField>
+<ResponseField name="name" type="string">Label.</ResponseField>
+<ResponseField name="last_used_at" type="string">ISO 8601, or `null`.</ResponseField>
+<ResponseField name="expires_at" type="string">ISO 8601, or `null` if it does not expire.</ResponseField>
+<ResponseField name="created_at" type="string">ISO 8601.</ResponseField>
+
+<RequestExample>
+```bash
+curl https://connect.trypost.it/api/api-keys \
+  -H "Authorization: Bearer YOUR_API_KEY"
+```
+</RequestExample>

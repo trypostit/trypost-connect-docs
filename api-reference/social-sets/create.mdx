@@ -1,0 +1,21 @@
+---
+title: Create social set
+api: "POST /social-sets"
+description: Create a set. Returns 201.
+---
+
+<ParamField body="name" type="string" required>
+  Unique on this account. Max 255.
+</ParamField>
+<ParamField body="color" type="string" required>
+  Exactly `#` plus 6 hex digits (e.g. `#2563EB`). `#RGB` and names are rejected.
+</ParamField>
+
+<RequestExample>
+```bash
+curl -X POST https://connect.trypost.it/api/social-sets \
+  -H "Authorization: Bearer YOUR_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{"name":"Launch","color":"#2563EB"}'
+```
+</RequestExample>

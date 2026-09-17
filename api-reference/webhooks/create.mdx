@@ -1,0 +1,28 @@
+---
+title: Create webhook
+api: "POST /webhooks"
+description: Create an outgoing webhook. Returns the signing secret. Does not send a test.
+---
+
+Requires **manage webhooks**. Created `enabled`. There is no `status` field on this request.
+
+<ParamField body="endpoint" type="string" required>
+  Public `http`/`https` URL. Max 255. Private, loopback, and link-local addresses return `422` on `errors.endpoint`.
+</ParamField>
+<ParamField body="events" type="array" required>
+  At least one of: `post.created`, `post.scheduled`, `post.unscheduled`, `post.published`, `post.partially_published`, `post.failed`, `post.deleted`, `account.connected`, `account.disconnected`.
+</ParamField>
+
+`201` with `signing_secret`. Store it. Creating does **not** ping the URL — use [send test](/api-reference/webhooks/send-test).
+
+<RequestExample>
+```bash
+curl -X POST https://connect.trypost.it/api/webhooks \
+  -H "Authorization: Bearer YOUR_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "endpoint": "https://example.com/webhooks/connect",
+    "events": ["post.published", "post.failed"]
+  }'
+```
+</RequestExample>

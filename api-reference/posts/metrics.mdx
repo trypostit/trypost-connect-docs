@@ -1,0 +1,33 @@
+---
+title: Get post metrics
+api: "GET /posts/{id}/metrics"
+description: Engagement for a published post, per platform.
+---
+
+<ParamField path="id" type="string" required>
+  Post UUID.
+</ParamField>
+
+Results are cached **5 minutes** per post-platform.
+
+<ResponseField name="post_id" type="string">Post UUID.</ResponseField>
+<ResponseField name="platforms" type="array">
+  One row per **enabled** platform.
+  <Expandable>
+    <ResponseField name="post_platform_id" type="string">Post-platform UUID.</ResponseField>
+    <ResponseField name="platform" type="string">Platform slug.</ResponseField>
+    <ResponseField name="status" type="string">Per-platform publish status.</ResponseField>
+    <ResponseField name="platform_post_id" type="string">Id on the network, or `null`.</ResponseField>
+    <ResponseField name="platform_url" type="string">Public URL, or `null`.</ResponseField>
+    <ResponseField name="metrics" type="array | object">
+      Either `[{ "label", "value" }, …]` or `{ "unsupported": true, "reason": "not_published" | "platform_not_supported" }`. LinkedIn **profile** posts are `platform_not_supported`. A row that is not published yet is `not_published`.
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+<RequestExample>
+```bash
+curl https://connect.trypost.it/api/posts/9f1a2b3c-4d5e-6f7a-8b9c-0d1e2f3a4b5c/metrics \
+  -H "Authorization: Bearer YOUR_API_KEY"
+```
+</RequestExample>

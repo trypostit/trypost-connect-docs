@@ -1,0 +1,34 @@
+---
+title: List Discord channels
+api: "GET /social-accounts/{id}/channels"
+description: Channels the bot can post to. Use an id as platforms[].meta.channel_id.
+---
+
+Throttled to **60 requests / minute**.
+
+<ParamField path="id" type="string" required>
+  Discord social account UUID. Other platforms return `422`.
+</ParamField>
+
+<ResponseField name="channels" type="array">
+  Text and announcement channels with View Channel + Send Messages. `{ "id", "name" }` — `name` has no `#`.
+</ResponseField>
+
+`502` if Discord is unavailable upstream.
+
+<RequestExample>
+```bash
+curl https://connect.trypost.it/api/social-accounts/b2c3d4e5-f6a7-8b9c-0d1e-2f3a4b5c6d7e/channels \
+  -H "Authorization: Bearer YOUR_API_KEY"
+```
+</RequestExample>
+
+<ResponseExample>
+```json
+{
+  "channels": [
+    { "id": "444555666777888999", "name": "announcements" }
+  ]
+}
+```
+</ResponseExample>

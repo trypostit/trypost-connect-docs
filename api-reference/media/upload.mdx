@@ -1,0 +1,29 @@
+---
+title: Upload media bytes
+api: "PUT /medias/{token}"
+description: Signed PUT of the file bytes. No Bearer token. Usually you call upload_url instead.
+---
+
+Local / signed fallback for [`POST /medias/presign`](/api-reference/media/presign). On Cloud, `upload_url` is typically an object-storage URL — PUT there, not here.
+
+Query string on `upload_url` is the signature. Do **not** send `Authorization`. Rate-limited **60 / minute per account** and **1200 / minute per IP**.
+
+## Request
+
+<ParamField path="token" type="string" required>
+  UUID from the signed URL. Not something you invent.
+</ParamField>
+
+Send the raw file body with the `Content-Type` from the presign `headers`.
+
+## Response
+
+`200` with an empty body.
+
+<RequestExample>
+```bash
+curl -X PUT "$UPLOAD_URL" \
+  -H "Content-Type: image/jpeg" \
+  --data-binary @photo.jpg
+```
+</RequestExample>

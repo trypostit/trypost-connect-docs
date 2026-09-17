@@ -1,0 +1,27 @@
+---
+title: Get webhook
+api: "GET /webhooks/{id}"
+description: One webhook, including signing_secret.
+---
+
+<ParamField path="id" type="string" required>
+  Webhook UUID.
+</ParamField>
+
+<ResponseField name="id" type="string">Webhook UUID.</ResponseField>
+<ResponseField name="endpoint" type="string">Delivery URL.</ResponseField>
+<ResponseField name="events" type="array">Subscribed event names.</ResponseField>
+<ResponseField name="status" type="string">`enabled`, `disabled`, or `paused` (Connect auto-pauses after repeated failures).</ResponseField>
+<ResponseField name="last_sent_at" type="string">ISO 8601, or `null`.</ResponseField>
+<ResponseField name="paused_at" type="string">ISO 8601, or `null`.</ResponseField>
+<ResponseField name="consecutive_failures" type="integer">Failure streak.</ResponseField>
+<ResponseField name="signing_secret" type="string">Present on get, create, and rotate. Omitted on list and update.</ResponseField>
+<ResponseField name="created_at" type="string">ISO 8601.</ResponseField>
+<ResponseField name="updated_at" type="string">ISO 8601.</ResponseField>
+
+<RequestExample>
+```bash
+curl https://connect.trypost.it/api/webhooks/a1b2c3d4-e5f6-7890-abcd-ef1234567890 \
+  -H "Authorization: Bearer YOUR_API_KEY"
+```
+</RequestExample>

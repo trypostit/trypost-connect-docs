@@ -1,0 +1,21 @@
+---
+title: Replay webhook log
+api: "POST /webhooks/{id}/logs/{log_id}/replay"
+description: Queue a new delivery from a log. Returns { replayed: true }.
+---
+
+<ParamField path="id" type="string" required>
+  Webhook UUID.
+</ParamField>
+<ParamField path="log_id" type="string" required>
+  Delivery log UUID.
+</ParamField>
+
+The replay gets a new envelope `id`. It runs even if the webhook is paused or disabled. The signed body is a new attempt (`created_at` changes).
+
+<RequestExample>
+```bash
+curl -X POST https://connect.trypost.it/api/webhooks/a1b2c3d4-e5f6-7890-abcd-ef1234567890/logs/9f1a2b3c-4d5e-6f7a-8b9c-0d1e2f3a4b5c/replay \
+  -H "Authorization: Bearer YOUR_API_KEY"
+```
+</RequestExample>

@@ -1,18 +1,13 @@
-# TryPost Docs
+# TryPost Connect Docs
 
-Documentation for [TryPost](https://github.com/trypost-it/trypost) — open source social media scheduling.
+Documentation for [TryPost Connect](https://connect.trypost.it) — social publishing infrastructure (REST + MCP). Built with [Mintlify](https://mintlify.com).
+
+This is **not** the old TryPost scheduler docs.
 
 ## Development
 
-Install the [Mintlify CLI](https://www.npmjs.com/package/mint) to preview changes locally:
-
 ```bash
 npm i -g mint
-```
-
-Run at the root of the project:
-
-```bash
 mint dev
 ```
 
@@ -20,21 +15,14 @@ Preview at `http://localhost:3000`.
 
 ## Publishing
 
-Changes pushed to the `main` branch are deployed automatically via the [Mintlify GitHub app](https://dashboard.mintlify.com/settings/organization/github-app).
+Pushes to `main` deploy via the [Mintlify GitHub app](https://dashboard.mintlify.com/settings/organization/github-app).
 
 ## Structure
 
 ```
-├── getting-started/    # Installation, configuration, first steps
-├── platforms/          # LinkedIn, X, Facebook, Instagram, TikTok, YouTube, Threads, Pinterest, Bluesky, Mastodon
-├── features/           # Scheduling, workspaces, team management
-├── self-hosting/       # Requirements, production, Docker
-├── contributing.mdx    # Contributing guide
-└── docs.json           # Mintlify configuration
+├── getting-started/   # Auth, first publish
+├── guides/            # Connect, media, posts, sets, webhooks, MCP, billing
+├── platforms/         # Per-network content types and limits
+├── api-reference/     # REST endpoints
+└── docs.json
 ```
-
-## Links
-
-- [TryPost](https://github.com/trypost-it/trypost)
-- [Issues](https://github.com/trypost-it/trypost/issues)
-- [Discussions](https://github.com/trypost-it/trypost/discussions)

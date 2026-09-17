@@ -1,0 +1,45 @@
+---
+title: Connect social account
+api: "GET /social-accounts/connect/{platform}"
+description: Returns a URL to open in the browser. Connect redirects to your redirect_url.
+---
+
+Requires **manage accounts**. Connecting X, or a third non-X account, without a subscription returns **402**.
+
+The API never 302s the caller. See [Connect accounts](/guides/connect-accounts).
+
+## Request
+
+<ParamField path="platform" type="string" required>
+  `x`, `tiktok`, `youtube`, `facebook`, `instagram`, `instagram-facebook`, `linkedin`, `linkedin-page`, `threads`, `pinterest`, `discord`, `bluesky`, `mastodon`, `telegram`.
+</ParamField>
+<ParamField query="redirect_url" type="string" required>
+  Absolute URL (`http` / `https` / custom scheme). Max 2048.
+</ParamField>
+
+## Response
+
+<ResponseField name="url" type="string">
+  Open in the browser. OAuth platforms are the provider authorize URL. Bluesky, Mastodon, and Telegram are a Connect-hosted page. Do not send an API key to this URL.
+</ResponseField>
+<ResponseField name="state" type="string">
+  Opaque token bound to the account, user, platform, and `redirect_url`. Valid 15 minutes.
+</ResponseField>
+
+On success the browser lands on `redirect_url?connected={platform}&id={social_account_id}`. On failure: `?error=…`.
+
+<RequestExample>
+```bash
+curl "https://connect.trypost.it/api/social-accounts/connect/facebook?redirect_url=https://yourapp.com/oauth/done" \
+  -H "Authorization: Bearer YOUR_API_KEY"
+```
+</RequestExample>
+
+<ResponseExample>
+```json
+{
+  "url": "https://www.facebook.com/v25.0/dialog/oauth?…",
+  "state": "opaque-state-token"
+}
+```
+</ResponseExample>

@@ -1,0 +1,139 @@
+---
+title: MCP
+description: Agents use Connect over MCP — OAuth, tools, and the publish workflow. No connect tool.
+icon: "microchip-ai"
+---
+
+[MCP](https://modelcontextprotocol.io) is how agents use the same Connect account as the [REST API](/api-reference/introduction) — posts, media, social accounts, sets, webhooks, logs — called as tools.
+
+```
+https://connect.trypost.it/mcp
+```
+
+## Authentication
+
+OAuth 2.1 with Dynamic Client Registration, PKCE, and the `mcp:use` scope. Add the URL, click Connect, sign in at [connect.trypost.it](https://connect.trypost.it).
+
+<Warning>
+  API keys authenticate [`https://connect.trypost.it/api`](/getting-started/authentication) only. A Bearer token on `/mcp` returns **403**.
+</Warning>
+
+Revoke assistants under [Settings → MCP](https://connect.trypost.it/settings/account/mcp).
+
+## Add a client
+
+<AccordionGroup>
+  <Accordion title="Cursor">
+    Cursor 1.0+. In the project root, `.cursor/mcp.json`:
+
+    ```json
+    {
+      "mcpServers": {
+        "trypost-connect": {
+          "url": "https://connect.trypost.it/mcp"
+        }
+      }
+    }
+    ```
+
+    Open MCP settings → **Connect** next to **trypost-connect** → approve in the browser. Then: `List my Connect social accounts`.
+  </Accordion>
+
+  <Accordion title="Claude Code">
+    ```bash
+    claude mcp add --transport http trypost-connect https://connect.trypost.it/mcp
+    ```
+
+    Append `--scope user` to share it across projects. The first tool call opens the Connect sign-in.
+  </Accordion>
+
+  <Accordion title="Claude web">
+    [Customize → Connectors](https://claude.ai/customize/connectors) → **Add custom connector**. Name `TryPost Connect`, URL `https://connect.trypost.it/mcp`. Leave Client ID / Secret empty. Enable the connector on the chat **+** menu before asking it to post.
+  </Accordion>
+
+  <Accordion title="ChatGPT">
+    Requires Pro/Plus/Business (or similar) and **Developer mode** on the web. [Create a connector](https://chatgpt.com/plugins#settings/Connectors?create-connector=true&redirectAfter=%2Fplugins): name `TryPost Connect`, URL `https://connect.trypost.it/mcp`, authentication **OAuth**, no client id/secret. In a new chat, turn on Developer mode and the connector.
+  </Accordion>
+</AccordionGroup>
+
+## Recommended workflow
+
+1. **`list-social-accounts-tool`**
+2. **`list-content-types-tool`** — valid `content_type` values and media caps (MCP-only; there is no REST catalog)
+3. **`list-pinterest-boards-tool`** / **`list-discord-channels-tool`** when those networks are in the post
+4. **`request-media-upload-tool`** — PUT the file to `upload_url` (no Authorization), then pass `public_url` as `media[].url`
+5. **`create-post-tool`** — `content`, optional `media[]`, `platforms[]` (`custom_content` / `custom_media` / `meta`)
+6. **`preview-post-tool`** (optional)
+7. **`publish-post-tool`** now, or **`update-post-tool`** with `status=scheduled`
+
+Connecting a new network is still [`GET /social-accounts/connect/{platform}`](/guides/connect-accounts) in a browser.
+
+<Warning>
+  External URLs are not accepted. There is no attach-from-URL tool and no asset library.
+</Warning>
+
+## Tools
+
+### Posts
+
+| Tool | Description |
+|------|-------------|
+| **list-posts-tool** | Newest `scheduled_at` first. `status` is `draft` \| `scheduled` \| `published` \| `failed` (`published` includes `partially_published`). `search` matches caption. `limit` 1–100, default 50. REST list has **no** these filters — only `page`. |
+| **get-post-tool** | One post, including `platforms[].custom_content`, `custom_media`, and `meta`. |
+| **create-post-tool** | Draft. `content` (max 10 000), optional `scheduled_at` (status stays `draft`), `media[]` (`public_url` after the PUT). `platforms[]` is optional here (REST create requires `min:1`). |
+| **update-post-tool** | Editable drafts only. `status` is `draft` \| `scheduled` — not `publishing`. `platforms[]` keyed by post-platform **`id`**. Send `custom_*` as `null` to inherit again. Immediate publish is `publish-post-tool`. |
+| **publish-post-tool** | Publish a draft. Optional future `scheduled_at`. Validates stored required meta and effective media. `IsDestructive`. |
+| **preview-post-tool** | Per-platform sanitized caption (effective `custom_content`). |
+| **request-media-upload-tool** | Presigned PUT. Then pass `public_url` on create/update. |
+| **delete-post-tool** | Permanently delete. `IsDestructive`. |
+| **get-post-metrics-tool** | Engagement for a published post. |
+
+`platforms[].meta` matches REST — [Per-platform meta](/api-reference/posts/update#per-platform-meta).
+
+### Social accounts and sets
+
+| Tool | Description |
+|------|-------------|
+| **list-social-accounts-tool** | `id`, `set_id`, `platform`, `display_name`, `username`, `avatar_url`, `status`. No `set_id` filter (REST has `?set_id=`). |
+| **assign-social-set-tool** | Move an account into a set, or `set_id` null to ungroup. |
+| **disconnect-social-account-tool** | Disconnect. `IsDestructive`. |
+| **list-pinterest-boards-tool** | Boards for `account_id` → `meta.board_id`. Needs create-post permission. |
+| **list-discord-channels-tool** | Channels for `account_id` → `meta.channel_id`. |
+| **list-social-sets-tool** / **get-social-set-tool** / **create-social-set-tool** / **update-social-set-tool** / **delete-social-set-tool** | Sets. |
+
+### Platforms
+
+| Tool | Description |
+|------|-------------|
+| **list-content-types-tool** | Per-platform `content_type` catalog and media caps. |
+
+### Account, keys, logs, webhooks
+
+| Tool | Description |
+|------|-------------|
+| **get-account-tool** | Current account (`id`, `name`, timestamps). |
+| **list-api-keys-tool** / **create-api-key-tool** / **delete-api-key-tool** | Tokens. Create returns the key metadata **plus** a `token` field (the plain secret). REST create uses `{ token, plain_token }`. Owner / Admin. |
+| **list-logs-tool** | Newest first. Retained 90 days. Each of `type`, `status`, `platform` is a **single** value (or `all`) — REST list accepts repeatable query params plus `from` / `to` / `account_search`. Also: `action`, `social_account_id`, `search`, `days` (1–90), `limit` (1–100, default 50). There is no get-log MCP tool — use REST [`GET /logs/{id}`](/api-reference/logs/get). |
+| **list-webhooks-tool** | List. Secrets omitted. |
+| **get-webhook-tool** | One webhook, includes `signing_secret`. |
+| **create-webhook-tool** | `endpoint` + `events[]` (includes `account.connected` / `account.disconnected`). No test ping. |
+| **update-webhook-tool** | `endpoint`, `events`, `status`. |
+| **delete-webhook-tool** | Delete webhook and logs. `IsDestructive`. |
+| **send-webhook-test-tool** | Signed `webhook.test`. |
+| **rotate-webhook-secret-tool** | New secret immediately. `IsDestructive`. |
+| **list-webhook-logs-tool** | `webhook_id`, `limit` 1–100 (default 50). Not paginated like REST. |
+| **replay-webhook-log-tool** | New delivery even if the webhook is paused or disabled. |
+
+## Troubleshooting
+
+<AccordionGroup>
+  <Accordion title="HTTP 402 — Active subscription required">
+    The OAuth grant is fine; the account lost app access. Open [connect.trypost.it](https://connect.trypost.it), subscribe, reconnect. See [Billing](/guides/billing).
+  </Accordion>
+  <Accordion title="HTTP 401 — Unauthenticated">
+    Session expired or the token was revoked. Run the client's Connect flow again.
+  </Accordion>
+  <Accordion title="HTTP 403 — MCP OAuth authorization required">
+    The request used an API key (or an OAuth token without `mcp:use`). Remove any `Authorization` header from the MCP config.
+  </Accordion>
+</AccordionGroup>

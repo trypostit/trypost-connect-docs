@@ -1,0 +1,18 @@
+---
+title: Send webhook test
+api: "POST /webhooks/{id}/send-test"
+description: Signed webhook.test ping. Returns { tested: true }.
+---
+
+<ParamField path="id" type="string" required>
+  Webhook UUID.
+</ParamField>
+
+Unreachable or blocked endpoints return `422` on `errors.endpoint`.
+
+<RequestExample>
+```bash
+curl -X POST https://connect.trypost.it/api/webhooks/a1b2c3d4-e5f6-7890-abcd-ef1234567890/send-test \
+  -H "Authorization: Bearer YOUR_API_KEY"
+```
+</RequestExample>

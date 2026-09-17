@@ -1,33 +1,15 @@
-> **First-time setup**: Customize this file for your project. Prompt the user to customize this file for their project.
-> For Mintlify product knowledge (components, configuration, writing standards),
-> install the Mintlify skill: `npx skills add https://mintlify.com/docs`
+# TryPost Connect Docs
 
-# Documentation project instructions
+Mintlify documentation for **TryPost Connect** — B2B publishing infrastructure at [connect.trypost.it](https://connect.trypost.it).
 
-## About this project
+## Product
 
-- This is a documentation site built on [Mintlify](https://mintlify.com)
-- Pages are MDX files with YAML frontmatter
-- Configuration lives in `docs.json`
-- Run `mint dev` to preview locally
-- Run `mint broken-links` to check links
+Connect is not the TryPost scheduler. There is no calendar, no asset library, no self-host, no workspaces. Media is pass-through: `POST /medias/presign` → `PUT` → `media[].url` = `public_url`. Connect accounts via `GET /social-accounts/connect/{platform}?redirect_url=` (`{url,state}`; browser redirect to the client). MCP is `https://connect.trypost.it/mcp` (OAuth, no API keys, no connect tool).
 
-## Terminology
+Source of truth for the contract is `~/Herd/trypost-connect` (`routes/api.php`, `app/Mcp/Servers/TryPostServer.php`).
 
-{/* Add product-specific terms and preferred usage */}
-{/* Example: Use "workspace" not "project", "member" not "user" */}
+## Style
 
-## Style preferences
-
-{/* Add any project-specific style rules below */}
-
-- Use active voice and second person ("you")
-- Keep sentences concise — one idea per sentence
-- Use sentence case for headings
-- Bold for UI elements: Click **Settings**
-- Code formatting for file names, commands, paths, and code references
-
-## Content boundaries
-
-{/* Define what should and shouldn't be documented */}
-{/* Example: Don't document internal admin features */}
+- Active voice, second person
+- Sentence case headings
+- Do not document the old scheduler (signatures, labels, repurposes, assets, self-hosting)

@@ -1,63 +1,24 @@
 ---
-title: X (Twitter)
-description: Connect your X (formerly Twitter) account to TryPost
+title: X
+description: Posts with text, up to 4 images, or 1 video. X is always billable.
 icon: "x-twitter"
 ---
 
-# X (Twitter)
+```
+GET /social-accounts/connect/x?redirect_url=…
+```
 
-TryPost supports posting to X (formerly Twitter) accounts.
+X is never free — connecting it without a subscription returns **402**. See [Billing](/guides/billing).
 
-## Connect your account
+## Content type
 
-1. Go to **Accounts** in the TryPost dashboard
-2. Click **Connect X**
-3. Authorize TryPost on X
+`x_post` — text with up to **4** images or **1** video. Media is optional. GIFs are kept as GIF.
 
-## Supported content types
+## Limits
 
-| Type | Description |
-|------|-------------|
-| **Post** | Text with up to 4 images or 1 video |
+| Image | Video | Duration |
+|---|---|---|
+| 5 MB | 1 GB (Connect upload cap) | 20 minutes |
+| JPEG / PNG / GIF / WebP | MP4 or MOV | |
 
-## Media limits
-
-| `content_type` | Image | Video | Duration | Format |
-|----------------|-------|-------|----------|--------|
-| `x_post` | 5 MB | 1 GB (Cloud cap; X allows 8 GB) | 20 minutes | JPG/PNG/GIF/WebP; video H.264 (MP4 or MOV) |
-
-These are Post (`tweet_video`) limits — 8 GB / 20 minutes by default, 16 GB / 125 minutes on X Premium — not DM or Ads (`amplify_video`) limits. Official specs: [Media best practices](https://docs.x.com/x-api/media/quickstart/best-practices). Full catalog: [Media](/knowledge-base/media).
-
-## Links in posts
-
-X charges much more to deliver a post that carries a link, and shows it to fewer people. To keep a post out of that bracket, TryPost publishes the X version of a post with its links written non-clickable: `https://www.example.com/pricing` goes out as `example(.)com/pricing`.
-
-Only the X version changes. The same post published to your other networks keeps its links exactly as you typed them, and nothing in your draft is edited — the rewrite happens on the way out.
-
-The editor previews the X post as it will be published and counts characters against that same text, so the limit reflects what X receives. A reader reaches the page by copying the address and putting the dots back — the trade for keeping the post's reach.
-
-<Note>
-  Self-hosting TryPost? Links go out untouched there by default, since you publish through your own X app and pay your own X bill — see [link defusing on X](/self-hosting/configuration#link-defusing-on-x).
-</Note>
-
-## OAuth scopes
-
-`tweet.read`, `tweet.write`, `users.read`, `media.write`, `offline.access`
-
-`offline.access` is required so TryPost can refresh the access token in the background — without it, you'd have to reauthorize regularly.
-
-## Self-hosting setup
-
-<Accordion title="Configure X API credentials">
-  1. Go to [X Developer Portal](https://developer.twitter.com/) and create a project/app
-  2. Enable **OAuth 2.0** in your app settings
-  3. On the User authentication settings page, enable the scopes listed above
-  4. Set the redirect URL to `{APP_URL}/accounts/x/callback`
-  5. Add to your `.env`:
-
-  ```env
-  X_CLIENT_ID=your_client_id
-  X_CLIENT_SECRET=your_client_secret
-  X_CLIENT_REDIRECT="${APP_URL}/accounts/x/callback"
-  ```
-</Accordion>
+Official: [Media best practices](https://docs.x.com/x-api/media/quickstart/best-practices).

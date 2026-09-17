@@ -1,38 +1,23 @@
 ---
 title: Mastodon
-description: Connect your Mastodon account to TryPost
+description: Posts on any instance. Connect asks for the instance URL, then runs OAuth there.
 icon: "mastodon"
 ---
 
-# Mastodon
+```
+GET /social-accounts/connect/mastodon?redirect_url=…
+```
 
-TryPost supports posting to any Mastodon instance.
+`url` is a Connect-hosted instance form, then the instance's OAuth.
 
-## Connect your account
+## Content type
 
-1. Go to **Accounts** in the TryPost dashboard
-2. Click **Connect Mastodon**
-3. Enter your Mastodon instance URL (e.g., `mastodon.social`)
-4. Authorize TryPost on your instance
+`mastodon_post` — caption optional. Up to **4** images or video. GIFs are kept as GIF. No `meta` keys.
 
-## Supported content types
+## Limits
 
-| Type | Description |
-|------|-------------|
-| **Post** | Text with up to 4 optional images or 1 video |
+| Image | Video |
+|---|---|
+| 10 MB | 40 MB |
 
-## Media limits
-
-| `content_type` | Image | Video | Format |
-|----------------|-------|-------|--------|
-| `mastodon_post` | 10 MB | 40 MB | JPEG/PNG/GIF/WebP; video MP4 or MOV |
-
-Official specs: [Attachments](https://docs.joinmastodon.org/user/posting/#attachments), [`Instance.media_attachments`](https://docs.joinmastodon.org/entities/Instance/). Full catalog: [Media](/knowledge-base/media).
-
-## OAuth scopes
-
-`read:accounts`, `write:statuses`, `write:media`
-
-## Self-hosting setup
-
-No API credentials or environment variables are required for Mastodon. TryPost dynamically registers an OAuth app on each Mastodon instance the first time a user connects from there.
+JPEG / PNG / GIF / WebP. Video MP4 or MOV.

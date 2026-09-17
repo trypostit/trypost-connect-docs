@@ -1,0 +1,16 @@
+---
+title: Get social set
+api: "GET /social-sets/{id}"
+description: One set, including social_accounts_count.
+---
+
+<ParamField path="id" type="string" required>
+  Set UUID.
+</ParamField>
+
+<RequestExample>
+```bash
+curl https://connect.trypost.it/api/social-sets/00000000-0000-0000-0000-000000000000 \
+  -H "Authorization: Bearer YOUR_API_KEY"
+```
+</RequestExample>

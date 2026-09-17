@@ -1,72 +1,23 @@
 ---
 title: Telegram
-description: Connect a Telegram channel or group to TryPost
+description: Channel and group posts. Connect hosts the /connect code screen.
 icon: "telegram"
 ---
 
-# Telegram
-
-TryPost publishes to Telegram **channels and groups** through a shared TryPost bot that you add as an administrator.
-
-## Connect a channel
-
-1. Go to **Accounts** in the TryPost dashboard
-2. Click **Connect** on **Telegram**
-3. Add the bot (e.g. **@TryPostBot**) as an **administrator** of your channel or group
-4. Copy the `/connect <code>` command shown in the dialog and post it in that channel
-5. TryPost links the channel automatically — the dialog closes once it's connected
-
-<Note>
-  The bot must be an **administrator** of the channel. Telegram only delivers channel posts (including the `/connect` command and reactions) to bots that are admins, and the bot needs admin rights to publish.
-</Note>
-
-Each channel or group becomes its own account. Connect as many as you want in the same workspace — see [multiple accounts](/knowledge-base/social-accounts#connection-limits).
-
-## Reconnecting a channel
-
-A channel that lost its connection shows a **Reconnect** button, which issues a fresh `/connect` code. Post that code **in the same channel the card points at** — a reconnect is tied to one card and will not move it to a different chat.
-
-Posting it somewhere else is rejected with *Post the command in the channel you are reconnecting*. The code is **not** consumed, so you can still post the same one in the right channel.
-
-## Supported content types
-
-| Type | Description |
-|------|-------------|
-| **Post** (`telegram_post`) | Text with up to 10 images/videos (multiple media are sent as an album) |
-
-## Media limits
-
-| `content_type` | Image | Video | Format |
-|----------------|-------|-------|--------|
-| `telegram_post` | 5 MB | 20 MB | JPEG/PNG/GIF/WebP; video MPEG4 (MP4 or MOV) |
-
-These are Telegram's **URL** limits (TryPost does not use multipart). Official specs: [Sending files](https://core.telegram.org/bots/api#sending-files). Full catalog: [Media](/knowledge-base/media).
-
-Telegram allows up to **4096** characters of text. Media captions are capped at **1024**, so a longer post is sent as the media followed by a separate text message. Formatting (bold, italic, links, `code`) and plain `@username` mentions are preserved — Telegram auto-links public usernames.
-
-## Analytics
-
-Telegram's Bot API exposes **no post view counts**. TryPost surfaces what is available:
-
-- **Subscribers** — the channel's member count (shown account-wide and on each post)
-- **Reactions** — per-post reaction counts (👍 ❤️ 🔥 …), pushed in real time by Telegram
-
-## Self-hosting setup
-
-Telegram uses a single shared bot. Create one with [@BotFather](https://t.me/BotFather), then configure:
-
-```env
-TELEGRAM_BOT_TOKEN=123456:ABC...
-TELEGRAM_BOT_USERNAME=YourBot
-TELEGRAM_WEBHOOK_SECRET=a-long-random-string
+```
+GET /social-accounts/connect/telegram?redirect_url=…
 ```
 
-Register the webhook so Telegram can deliver `/connect` commands and reactions:
+`url` is a Connect-hosted page that shows a `/connect <code>` instruction for the bot.
 
-```bash
-php artisan telegram:set-webhook
-```
+## Content type
 
-<Note>
-  The webhook URL is `{WEBHOOK_URL or APP_URL}/telegram/webhook`. That base URL must be a **public HTTPS** address Telegram can reach. If `APP_URL` is private (or you use a tunnel in development), set `WEBHOOK_URL` instead — see [Configuration](/self-hosting/configuration#basic-configuration). Re-run `telegram:set-webhook` whenever it changes.
-</Note>
+`telegram_post` — caption optional. Up to **10** images or video (albums). GIFs are kept as GIF. No `meta` keys.
+
+## Limits
+
+| Image | Video |
+|---|---|
+| 5 MB | 20 MB |
+
+These are Telegram's URL-publish caps. JPEG / PNG / GIF / WebP. Video MP4 or MOV.

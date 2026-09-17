@@ -1,0 +1,108 @@
+---
+title: Connect accounts
+description: The API returns a URL. The end-user browser finishes OAuth. Your server never follows a 302.
+icon: "link"
+---
+
+Connecting a network is a **browser** flow. Your backend asks Connect for a URL, opens it for the end user, and waits for Connect to send that browser back to your `redirect_url`.
+
+There is **no MCP connect tool**. Agents operate accounts that are already connected.
+
+## 1. Request a URL
+
+```bash
+GET /social-accounts/connect/{platform}?redirect_url=https://yourapp.com/connected
+```
+
+`redirect_url` must be absolute (`http`, `https`, or a custom scheme such as `myapp://callback`). Max 2048. Relative paths are rejected.
+
+```json
+{
+  "url": "https://www.facebook.com/v25.0/dialog/oauth?...",
+  "state": "opaque-state-token"
+}
+```
+
+Open `url` in the browser. Do **not** send your API key to that URL.
+
+`state` is bound to the account, user, platform, and `redirect_url`. It is valid for 15 minutes.
+
+Connecting X, or a third non-X account, without a subscription returns **402** with a `message`.
+
+## 2. What the browser does
+
+Connect hosts every picker and credential screen. You do not send users to the dashboard.
+
+| `{platform}` | What `url` opens |
+|---|---|
+| `x` | X OAuth (always billable) |
+| `tiktok` | TikTok OAuth |
+| `youtube` | Google OAuth |
+| `facebook` | Facebook OAuth, then Connect's Page picker when the login has more than one Page |
+| `instagram` | Instagram Login (no Facebook Page) |
+| `instagram-facebook` | Facebook OAuth, then Connect's Page picker for a Page-linked Instagram |
+| `linkedin` | LinkedIn OAuth, then Connect's profile / Page picker |
+| `linkedin-page` | LinkedIn OAuth scoped to Pages, then the same picker |
+| `threads` | Threads OAuth |
+| `pinterest` | Pinterest OAuth |
+| `discord` | Discord OAuth |
+| `bluesky` | Connect-hosted app-password form |
+| `mastodon` | Connect-hosted instance URL form, then the instance's OAuth |
+| `telegram` | Connect-hosted `/connect <code>` screen |
+
+A disabled platform returns **422** on `platform`.
+
+## 3. Redirect back to you
+
+On success the browser is sent to your `redirect_url` with existing query params kept:
+
+```
+https://yourapp.com/connected?connected=facebook&id=b2c3d4e5-f6a7-8b9c-0d1e-2f3a4b5c6d7e
+```
+
+| Query | Meaning |
+|---|---|
+| `connected` | Platform slug |
+| `id` | New or updated social account UUID |
+
+On failure the same URL receives `error` instead. Connect sets these values; a provider denial is forwarded as-is (often `access_denied`).
+
+| `error` | Meaning |
+|---|---|
+| `access_denied` | The user (or the provider) cancelled OAuth |
+| `invalid_state` | State missing, expired (15 minutes), or for another platform |
+| `session_expired` | Connect session for this flow is gone |
+| `error_connecting` | Provider or Connect failed while finishing the account |
+| `payment_required` | X, or a third non-X account, without a subscription |
+| `network_taken` | This Connect account already has that identity |
+| `wrong_account` | Reconnect returned a different provider user |
+| `busy` | Another connect on this network is still finishing |
+| `account_not_found` | The Connect account on `state` no longer exists |
+
+Then call [`GET /social-accounts`](/api-reference/social-accounts/list). The list is a **bare array**:
+
+```json
+[
+  {
+    "id": "b2c3d4e5-f6a7-8b9c-0d1e-2f3a4b5c6d7e",
+    "set_id": null,
+    "platform": "facebook",
+    "display_name": "Acme",
+    "username": "acme",
+    "avatar_url": "https://…",
+    "status": "connected"
+  }
+]
+```
+
+Read accounts by `id`, not by `platform`. The same network can appear more than once.
+
+`status` is `connected`, `disconnected`, or `token_expired`. Expired accounts are skipped at publish time.
+
+## After connect
+
+- Group identities with [social sets](/guides/social-sets): [`PUT /social-accounts/{id}/set`](/api-reference/social-accounts/assign-set).
+- Disconnect: [`DELETE /social-accounts/{id}`](/api-reference/social-accounts/disconnect) (`204`).
+- Pinterest `board_id` and Discord `channel_id` come from [`/boards`](/api-reference/social-accounts/boards) and [`/channels`](/api-reference/social-accounts/channels).
+
+Reconnecting the same `platform` + provider user updates the existing row. The same identity cannot sit twice under two slugs of one network (Instagram Login and Instagram via Facebook).

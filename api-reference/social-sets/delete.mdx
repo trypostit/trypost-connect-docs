@@ -1,0 +1,16 @@
+---
+title: Delete social set
+api: "DELETE /social-sets/{id}"
+description: Delete a set. Accounts in it become ungrouped. Returns 204.
+---
+
+<ParamField path="id" type="string" required>
+  Set UUID.
+</ParamField>
+
+<RequestExample>
+```bash
+curl -X DELETE https://connect.trypost.it/api/social-sets/00000000-0000-0000-0000-000000000000 \
+  -H "Authorization: Bearer YOUR_API_KEY"
+```
+</RequestExample>

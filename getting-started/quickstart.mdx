@@ -1,45 +1,114 @@
 ---
-title: "Quickstart"
-description: "Get started with TryPost in under 5 minutes"
+title: Quickstart
+description: API key, connect a network, upload a file, and publish a post.
 icon: "rocket"
 ---
 
-Get your social media scheduling up and running in minutes.
+This walkthrough uses the REST API. The same flow exists in the [playground](https://connect.trypost.it/playground) and, after accounts are connected, as [MCP tools](/guides/mcp).
 
 <Steps>
-  <Step title="Create your account">
-    Sign up at [app.trypost.it/register](https://app.trypost.it/register). Pick a plan and complete checkout — first-time subscribers pay **$1 for the first month**. Verify your email when the link arrives.
+  <Step title="Create an account">
+    Sign up at [https://connect.trypost.it/register](https://connect.trypost.it/register). One account per customer — no workspaces.
   </Step>
-  <Step title="Create your first workspace">
-    After signing in, set up a workspace (one per brand, client, or project). The workspace holds your social accounts, posts, labels, signatures, repurposes, and team members.
-  </Step>
-  <Step title="Connect your accounts">
-    Go to **Accounts** and connect your social media profiles. TryPost supports LinkedIn, X, Facebook, Instagram, TikTok, YouTube, Threads, Pinterest, Bluesky, Mastodon, Telegram, and Discord.
 
-    See the [platform guides](/) for details on each platform.
-  </Step>
-  <Step title="Create your first post">
-    Click **Create Post**, write your content, and choose to post now or schedule for later.
+  <Step title="Create an API key">
+    In the dashboard go to **[API keys](https://connect.trypost.it/api-keys)** and create a key. The plain token is shown once.
 
-    - Pick which connected accounts to publish to (each becomes a platform entry)
-    - Add images or videos from your machine, the asset library, Unsplash, or Giphy
-    - Assign labels to organize your content
+    ```bash
+    export TRYPOST_API_KEY='your_key'
+    export TRYPOST_API='https://connect.trypost.it/api'
+    ```
+
+    Every authenticated request sends `Authorization: Bearer $TRYPOST_API_KEY`.
   </Step>
-  <Step title="Schedule and publish">
-    Set a date and time, and TryPost will automatically publish your post at the right moment across all selected platforms.
+
+  <Step title="Connect a social account">
+    The API never 302s your server. It returns a URL for the **end user's browser**. After OAuth (or a Connect-hosted picker), the browser lands on *your* `redirect_url`.
+
+    ```bash
+    curl "$TRYPOST_API/social-accounts/connect/x?redirect_url=https://yourapp.com/connected" \
+      -H "Authorization: Bearer $TRYPOST_API_KEY"
+    ```
+
+    ```json
+    {
+      "url": "https://twitter.com/i/oauth2/authorize?…",
+      "state": "opaque-state-token"
+    }
+    ```
+
+    Open `url` in the browser. On success Connect redirects to:
+
+    ```
+    https://yourapp.com/connected?connected=x&id={social_account_id}
+    ```
+
+    On failure the same URL receives `error` (for example `access_denied`, `payment_required`). Then list accounts:
+
+    ```bash
+    curl "$TRYPOST_API/social-accounts" \
+      -H "Authorization: Bearer $TRYPOST_API_KEY"
+    ```
+
+    Details: [Connect accounts](/guides/connect-accounts).
+  </Step>
+
+  <Step title="Upload media">
+    External file URLs are not accepted. Presign, `PUT` the bytes (no Bearer token), then use `public_url` on the post.
+
+    ```bash
+    curl -X POST "$TRYPOST_API/medias/presign" \
+      -H "Authorization: Bearer $TRYPOST_API_KEY" \
+      -H "Content-Type: application/json" \
+      -d '{"filename":"photo.jpg","content_type":"image/jpeg","size":102400}'
+    ```
+
+    ```bash
+    curl -X PUT "$UPLOAD_URL" \
+      -H "Content-Type: image/jpeg" \
+      --data-binary @photo.jpg
+    ```
+
+    Details: [Media](/guides/media).
+  </Step>
+
+  <Step title="Create and publish a post">
+    `POST /posts` always creates a **draft**. Publish with `PUT /posts/{id}` and `status=publishing`, or schedule with `status=scheduled`.
+
+    ```bash
+    curl -X POST "$TRYPOST_API/posts" \
+      -H "Authorization: Bearer $TRYPOST_API_KEY" \
+      -H "Content-Type: application/json" \
+      -d '{
+        "content": "Hello from Connect",
+        "media": [{ "url": "https://…/temp/…/photo.jpg" }],
+        "platforms": [
+          {
+            "social_account_id": "00000000-0000-0000-0000-000000000000",
+            "content_type": "x_post"
+          }
+        ]
+      }'
+    ```
+
+    ```bash
+    curl -X PUT "$TRYPOST_API/posts/$POST_ID" \
+      -H "Authorization: Bearer $TRYPOST_API_KEY" \
+      -H "Content-Type: application/json" \
+      -d '{"status":"publishing"}'
+    ```
+
+    One post can target many networks. Per-network caption and media go in `platforms[].custom_content` / `custom_media`. Details: [Posts](/guides/posts).
   </Step>
 </Steps>
 
-## What's next?
+## What's next
 
-<Columns cols={3}>
-  <Card title="Platforms" icon="share-nodes" href="/">
-    Connect your social accounts
+<Columns cols={2}>
+  <Card title="Authentication" icon="key" href="/getting-started/authentication">
+    Bearer keys, MCP OAuth, and 401 / 403 / 402
   </Card>
-  <Card title="API Reference" icon="code" href="/api-reference/introduction">
-    Automate with the REST API
-  </Card>
-  <Card title="Build with AI" icon="microchip-ai" href="/ai/introduction">
-    Connect AI assistants via MCP
+  <Card title="Webhooks" icon="webhook" href="/guides/webhooks">
+    Signed deliveries when a post publishes or an account connects
   </Card>
 </Columns>

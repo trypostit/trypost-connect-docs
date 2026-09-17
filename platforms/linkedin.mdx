@@ -1,69 +1,34 @@
 ---
 title: LinkedIn
-description: Connect your LinkedIn profile or company pages to TryPost
+description: Profile and company Page posts — text, images, video, or a PDF document.
 icon: "linkedin"
 ---
 
-# LinkedIn
+Connect a personal profile (`linkedin`) or a company Page (`linkedin-page`). Each identity is its own social account. The same identity cannot sit twice.
 
-TryPost supports posting to LinkedIn personal profiles and company pages.
+```
+GET /social-accounts/connect/linkedin?redirect_url=…
+GET /social-accounts/connect/linkedin-page?redirect_url=…
+```
 
-## Connect your account
+Connect hosts LinkedIn OAuth, then a profile / Page picker.
 
-A single **LinkedIn** card covers both your personal profile and the company pages you administer — there is no separate "Connect LinkedIn Page" button.
+## Content types
 
-1. Go to **Accounts** in the TryPost dashboard
-2. Click **Connect** on **LinkedIn**
-3. Authorize TryPost on LinkedIn
-4. Pick what to connect on the **Select a LinkedIn identity** screen: your personal profile, or one of the Pages you administer
+| Connection | `content_type` | Media |
+|---|---|---|
+| Profile | `linkedin_post` | Up to 10 images, **or** 1 video, **or** 1 PDF |
+| Page | `linkedin_page_post` | Same |
 
-Each identity connects as its own social account.
+There is no `linkedin_carousel`. A PDF is a document post. Optional `platforms[].meta.document_title` (max 300).
 
-<Note>
-  You can connect your profile and as many Pages as you administer — each identity is its own account. Connecting another one means authorizing again, which is normal — LinkedIn keeps both tokens valid as long as TryPost asks for the same permissions each time. The same identity cannot sit twice. See [multiple accounts](/knowledge-base/social-accounts#connection-limits).
-</Note>
+## Limits
 
-## Supported content types
+| | Image | Video | PDF | Duration |
+|---|---|---|---|---|
+| Cap | 5 MB | 1 GB (Connect upload cap) | 100 MB | 10 minutes |
+| Format | JPEG / PNG | MP4 or MOV | PDF alone | |
 
-| Type | `content_type` | Description |
-|------|----------------|-------------|
-| **Post** | `linkedin_post` / `linkedin_page_post` | Text with optional media — up to **10 images**, **1 video**, or **1 PDF**. Format is inferred from the attached files (no separate carousel / document content type). For PDF posts you can set `platforms[].meta.document_title`. |
+Images, video, and PDF cannot be mixed on one post. Caption is supported. Media is optional.
 
-Personal profiles use `linkedin_post`; company pages use `linkedin_page_post`.
-
-## Media limits
-
-| `content_type` | Image | Video | PDF | Duration | Format |
-|----------------|-------|-------|-----|----------|--------|
-| `linkedin_post` / `linkedin_page_post` | 5 MB | 1 GB | 100 MB | 10 minutes | JPG/PNG. Video MP4 or MOV. PDF alone |
-
-Official specs: [Videos](https://learn.microsoft.com/en-us/linkedin/marketing/community-management/shares/videos-api), [Images](https://learn.microsoft.com/en-us/linkedin/marketing/community-management/shares/images-api), [Documents](https://learn.microsoft.com/en-us/linkedin/marketing/community-management/shares/documents-api). Full catalog: [Media](/knowledge-base/media).
-
-## OAuth scopes
-
-| Connection | Scopes requested |
-|------------|------------------|
-| Personal profile (`linkedin`) | `openid`, `profile`, `email`, `r_basicprofile`, `w_member_social` |
-| Company page (`linkedin-page`) | `openid`, `profile`, `email`, `w_organization_social`, `r_organization_social`, `rw_organization_admin`, `w_member_social` |
-
-## Self-hosting setup
-
-<Accordion title="Configure LinkedIn API credentials">
-  1. Go to [LinkedIn Developers](https://developer.linkedin.com/) and click **Create App**
-  2. Fill in app details (name, company page, logo) and create the app
-  3. Go to the **Auth** tab and add redirect URLs:
-     - `{APP_URL}/accounts/linkedin/callback` (profiles)
-     - `{APP_URL}/accounts/linkedin-page/callback` (pages)
-  4. Go to the **Products** tab and request access to:
-     - **Share on LinkedIn**
-     - **Sign In with LinkedIn using OpenID Connect**
-     - **Marketing Developer Platform** (required for company-page scopes like `w_organization_social` and `rw_organization_admin`)
-  5. Add to your `.env`:
-
-  ```env
-  LINKEDIN_CLIENT_ID=your_client_id
-  LINKEDIN_CLIENT_SECRET=your_client_secret
-  LINKEDIN_CLIENT_REDIRECT="${APP_URL}/accounts/linkedin/callback"
-  LINKEDIN_PAGE_CLIENT_REDIRECT="${APP_URL}/accounts/linkedin-page/callback"
-  ```
-</Accordion>
+Official: [Images](https://learn.microsoft.com/en-us/linkedin/marketing/community-management/shares/images-api), [Videos](https://learn.microsoft.com/en-us/linkedin/marketing/community-management/shares/videos-api), [Documents](https://learn.microsoft.com/en-us/linkedin/marketing/community-management/shares/documents-api).

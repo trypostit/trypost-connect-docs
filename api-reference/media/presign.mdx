@@ -1,0 +1,48 @@
+---
+title: Presign media upload
+api: "POST /medias/presign"
+description: Get a signed PUT URL. Then send public_url as media[].url on the post.
+---
+
+Requires **create post**. See the [media guide](/guides/media).
+
+## Request
+
+<ParamField body="filename" type="string" required>
+  Original filename, including extension (e.g. `clip.mp4`). Max 500.
+</ParamField>
+<ParamField body="content_type" type="string" required>
+  MIME type. Allowed: `image/jpeg`, `image/jpg`, `image/png`, `image/gif`, `image/webp`, `video/mp4`, `video/quicktime`, `application/pdf`.
+</ParamField>
+<ParamField body="size" type="integer">
+  Optional size in bytes. Rejected when it exceeds the type cap (10 MB image, 1 GB video, 100 MB PDF).
+</ParamField>
+
+## Response
+
+<ResponseField name="upload_url" type="string">PUT the file here. No Authorization header.</ResponseField>
+<ResponseField name="public_url" type="string">Pass this as `media[].url` after the PUT succeeds.</ResponseField>
+<ResponseField name="key" type="string">Storage key (`temp/{account_id}/…`).</ResponseField>
+<ResponseField name="expires_in" type="integer">Seconds until `upload_url` expires (3600).</ResponseField>
+<ResponseField name="headers" type="object">Must be sent with the PUT. Always includes `Content-Type`.</ResponseField>
+
+<RequestExample>
+```bash
+curl -X POST https://connect.trypost.it/api/medias/presign \
+  -H "Authorization: Bearer YOUR_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{"filename":"photo.jpg","content_type":"image/jpeg","size":102400}'
+```
+</RequestExample>
+
+<ResponseExample>
+```json
+{
+  "upload_url": "https://…",
+  "public_url": "https://…/temp/d4e5f6a7-b8c9-0d1e-2f3a-4b5c6d7e8f9a/01HX…_photo.jpg",
+  "key": "temp/d4e5f6a7-b8c9-0d1e-2f3a-4b5c6d7e8f9a/01HX…_photo.jpg",
+  "expires_in": 3600,
+  "headers": { "Content-Type": "image/jpeg" }
+}
+```
+</ResponseExample>

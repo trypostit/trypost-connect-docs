@@ -1,0 +1,121 @@
+---
+title: Update post
+api: "PUT /posts/{id}"
+description: Edit a draft, schedule it, or publish immediately.
+---
+
+## Request
+
+<ParamField path="id" type="string" required>
+  Post UUID.
+</ParamField>
+
+<ParamField body="status" type="string" required>
+  - `draft` — keep as draft
+  - `scheduled` — requires `scheduled_at` in the future
+  - `publishing` — publish now
+</ParamField>
+
+<ParamField body="content" type="string">
+  Shared caption (max **10 000**).
+</ParamField>
+
+<ParamField body="media" type="array">
+  Replace shared media. Each `url` must be a [presign `public_url`](/guides/media). Optional `meta.alt_text` (max 2000).
+</ParamField>
+
+<ParamField body="platforms" type="array">
+  Entries to **enable**. Platforms not listed are disabled. Empty array disables all.
+  <Expandable>
+    <ParamField body="id" type="string" required>
+      Post-platform UUID from `GET /posts/{id}`.
+    </ParamField>
+    <ParamField body="content_type" type="string">
+      Override the format. Must match the social account's platform.
+    </ParamField>
+    <ParamField body="custom_content" type="string">
+      Omit to keep the stored override. `null` clears it (inherit again). `""` publishes with no caption.
+    </ParamField>
+    <ParamField body="custom_media" type="array">
+      Omit to keep. `null` inherits root media. `[]` publishes without media.
+    </ParamField>
+    <ParamField body="meta" type="object">
+      Merged into the stored object. Send a key as `null` to remove it.
+    </ParamField>
+  </Expandable>
+</ParamField>
+
+<ParamField body="scheduled_at" type="string">
+  ISO 8601. Required when `status=scheduled`.
+</ParamField>
+
+## Per-platform `meta`
+
+Same keys on [`POST /posts`](/api-reference/posts/create) and the MCP create/update tools.
+
+- Only the keys below are stored. Unknown keys are dropped.
+- On update, `meta` is **merged**. `"title": null` removes `title`.
+- Required-to-publish keys are enforced when `status` is `scheduled` or `publishing` **and** the body includes `platforms[]`. Publishing with only `{ "status": "publishing" }` does not re-check stored meta — the MCP `publish-post-tool` always does.
+- Media compatibility is always re-checked on `scheduled` / `publishing`, with or without `platforms[]`, against each row's **effective** media.
+- Caption length is measured per platform against the effective caption.
+- Enum fields are exact JSON strings.
+
+Platforms with **no** `meta` keys: X, YouTube, Threads, Bluesky, Mastodon, Telegram.
+
+### Instagram / Facebook
+
+| Key | Type | Required to publish? | Description |
+|-----|------|----------------------|-------------|
+| `aspect_ratio` | string | No | `"1:1"`, `"4:5"`, `"16:9"`, `"original"` |
+
+### LinkedIn / LinkedIn Page
+
+| Key | Type | Required to publish? | Description |
+|-----|------|----------------------|-------------|
+| `document_title` | string (max 300) | No | Title on a **PDF** post. Falls back to the filename, then `"Document"`. |
+
+### TikTok
+
+| Key | Type | Required to publish? | Applies to | Description |
+|-----|------|----------------------|------------|-------------|
+| `privacy_level` | string | **Yes** | Video + photo | `"PUBLIC_TO_EVERYONE"`, `"MUTUAL_FOLLOW_FRIENDS"`, `"FOLLOWER_OF_CREATOR"`, `"SELF_ONLY"` |
+| `allow_comments` | boolean | No | Video + photo | Connect sends the inverted TikTok flag |
+| `allow_duet` | boolean | No | Video only | Ignored for `tiktok_photo` |
+| `allow_stitch` | boolean | No | Video only | Ignored for `tiktok_photo` |
+| `auto_add_music` | boolean | No | Photo only | Ignored for `tiktok_video` |
+| `is_aigc` | boolean | No | Video only | AI-generated content |
+| `disclose` | boolean | No | Video + photo | Stored only — use `brand_*` for the real disclosure |
+| `brand_content_toggle` | boolean | No | Video + photo | Paid partnership |
+| `brand_organic_toggle` | boolean | No | Video + photo | Organic promotional disclosure |
+
+### Pinterest
+
+| Key | Type | Required to publish? | Description |
+|-----|------|----------------------|-------------|
+| `board_id` | string | **Yes** | From [`GET /social-accounts/{id}/boards`](/api-reference/social-accounts/boards) |
+| `title` | string (max 100) | No | Pin title |
+| `link` | string (max 2048) | No | `http`/`https` destination |
+
+Pin **description** is the effective caption, not a meta field.
+
+### Discord
+
+| Key | Type | Required to publish? | Description |
+|-----|------|----------------------|-------------|
+| `channel_id` | string | **Yes** | From [`GET /social-accounts/{id}/channels`](/api-reference/social-accounts/channels) |
+| `channel_name` | string | No | Display only |
+| `mentions` | array | No | `{ "token": string, "label"?: string }` — `"@everyone"`, `"@here"`, `"<@id>"`, `"<@&id>"` |
+| `embeds` | array (max 10) | No | `title` (256), `description` (4096), `url`, `image`, `color` (`#RRGGBB` or `RRGGBB`) |
+
+## Response
+
+The updated post. `422` with a `message` when the post is already finalized (`published`, `publishing`, `partially_published`, or `failed`).
+
+<RequestExample>
+```bash
+curl -X PUT https://connect.trypost.it/api/posts/9f1a2b3c-4d5e-6f7a-8b9c-0d1e2f3a4b5c \
+  -H "Authorization: Bearer YOUR_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{"status":"publishing"}'
+```
+</RequestExample>
