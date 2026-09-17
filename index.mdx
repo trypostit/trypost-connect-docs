@@ -1,65 +1,66 @@
 ---
 title: What is Connect
-description: Social publishing infrastructure for products you build — REST API, MCP, and a hosted connect flow.
+description: Publishing infrastructure for products you build — REST, MCP, and a hosted connect flow.
 icon: "plug"
 ---
 
-TryPost Connect is **B2B publishing infrastructure**. You build the scheduler, agent, or product. We run OAuth, token refresh, media hosting, native publish, and webhooks across 12 networks.
+TryPost Connect is the layer you call to connect social accounts, upload media, and publish natively. You keep the editor and the queue. We run OAuth, tokens, storage, and the networks.
 
-It is **not** a calendar, composer, or agency suite. There is no asset library and no self-host install. Connect is a closed-source Cloud product at [https://connect.trypost.it](https://connect.trypost.it).
+It is not a calendar and not an agency suite. There is no asset library.
 
-<CardGroup cols={2}>
+<CardGroup cols={3}>
   <Card title="Get started" icon="rocket" href="/getting-started/quickstart">
-    Account, connected networks, then an API key or MCP.
+    Account, connect a network, create a token.
   </Card>
   <Card title="API reference" icon="code" href="/api-reference/introduction">
-    Every REST endpoint, with request and response shapes.
+    Every REST endpoint.
   </Card>
-  <Card title="MCP" icon="microchip-ai" href="/guides/mcp">
-    Point Cursor, Claude, or ChatGPT at https://connect.trypost.it/mcp
-  </Card>
-  <Card title="Playground" icon="flask" href="https://connect.trypost.it/playground">
-    Call the live API from the Connect dashboard.
+  <Card title="MCP" icon="microchip" href="/guides/mcp">
+    The same account, as tools for an agent.
   </Card>
 </CardGroup>
 
-## URLs
+## How you call it
 
-| | |
-|---|---|
-| App | [https://connect.trypost.it](https://connect.trypost.it) |
-| Register | [https://connect.trypost.it/register](https://connect.trypost.it/register) |
-| Sign in | [https://connect.trypost.it/login](https://connect.trypost.it/login) |
-| REST | `https://connect.trypost.it/api` |
-| MCP | `https://connect.trypost.it/mcp` |
-| Playground | [https://connect.trypost.it/playground](https://connect.trypost.it/playground) |
-| API keys | [https://connect.trypost.it/api-keys](https://connect.trypost.it/api-keys) |
+**REST** — `https://connect.trypost.it/api` with a Bearer token. Create the token in the dashboard under **API keys**. It is shown once. Keep it on a server. Details: [Authentication](/getting-started/authentication).
 
-## Surfaces
+**MCP** — `https://connect.trypost.it/mcp`. The agent signs in with OAuth. An API key on that URL is refused. Setup: [MCP](/guides/mcp).
 
-Same account, three callers:
+There is no `api.connect.trypost.it`. The dashboard is for your team. It is not the UI you ship.
 
-| Surface | Who uses it | What it does |
-|---|---|---|
-| **REST API** | Your backend | Full contract: connect, media, posts, sets, webhooks, keys, logs |
-| **MCP** | Agents | Same account. Operate connected accounts, posts, and webhooks. No connect tool — OAuth needs a browser. |
-| **Web** | Your team | Ops dashboard: accounts, keys, billing, playground. Not your end-user UI. |
+## Publish a post
 
-## What you host vs what we host
+```mermaid
+sequenceDiagram
+  participant App as Your product
+  participant User
+  participant Connect
+  participant Storage
+  participant Network
 
-You keep the editor, queue, and brand. Connect hosts:
+  App->>Connect: Start connect
+  Connect-->>App: URL to open
+  User->>Network: Sign in
+  Connect->>User: Back to your product
+  App->>Connect: Ask for an upload slot
+  Connect-->>App: Upload URL + public URL
+  App->>Storage: Put the file
+  App->>Connect: Create a draft with that public URL
+  App->>Connect: Publish
+  Connect->>Network: Native post
+```
 
-- OAuth and credential screens (including Bluesky, Mastodon, and Telegram)
-- Token storage and refresh
-- Direct-to-storage media upload
-- Native publish to each network
-- Outbound webhooks
+1. **Connect a network** in the user’s browser. You start the flow and receive them back. There is no MCP connect tool. [Connect accounts](/guides/connect-accounts).
+2. **Upload the file** to Connect first. We do not fetch URLs from the internet. [Media](/guides/media).
+3. **Create a draft**, then schedule it or publish now. One post, many networks; caption and media can differ per row. [Posts](/guides/posts).
 
-Media is pass-through: ask for an upload slot, put the file, attach that public URL on the post. External URLs are rejected. There is no library to browse later. See [Media](/guides/media).
+When a post lands (or fails), or an account connects, we can `POST` a signed event to your URL. [Webhooks](/guides/webhooks).
+
+Exact paths and bodies: [API reference](/api-reference/introduction).
 
 ## Networks
 
-Twelve networks, fourteen connection identifiers (LinkedIn profile vs Page, Instagram Login vs Facebook Page):
+Twelve networks. LinkedIn is profile or Page. Instagram is Login or via Facebook. Those are different connections.
 
 <Columns cols={3}>
   <Card title="LinkedIn" icon="linkedin" href="/platforms/linkedin">Profile and company Page</Card>
@@ -76,14 +77,6 @@ Twelve networks, fourteen connection identifiers (LinkedIn profile vs Page, Inst
   <Card title="Discord" icon="discord" href="/platforms/discord">Channel messages</Card>
 </Columns>
 
-An account may connect as many identities on the same network as it wants (two LinkedIns, three Instagrams). The same identity cannot sit twice.
+You can connect more than one identity on the same network. The same person cannot sit twice.
 
-## Billing
-
-Two non-X accounts are free. X always counts as 1. Extra non-X accounts are $3 each / month.
-
-```
-quantity = xCount + max(0, nonXCount - 2)
-```
-
-Connecting beyond the free allowance (or connecting X) without a card is refused. See [Billing](/guides/billing).
+Two non-X accounts are free. X always counts. Extra non-X accounts are $3 each / month. Connecting beyond that without a card is refused.
